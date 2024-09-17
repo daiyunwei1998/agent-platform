@@ -5,7 +5,7 @@ import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import axios from "axios";
 
-const chatServiceHost = "http://203.204.185.67:8080" ;
+const chatServiceHost = "http://203.204.185.67:8080";
 
 const AgentChat = () => {
   const [messages, setMessages] = useState([]);
@@ -17,10 +17,10 @@ const AgentChat = () => {
   const [userId, setUserId] = useState(""); // User ID state
   const [isConnected, setIsConnected] = useState(false); // Track connection status
   const clientRef = useRef(null);
-  const messageRefs = useRef({}); 
+  const messageRefs = useRef({});
 
-  useEffect(() => {
-    if (tenantId && userId && isConnected) {
+  const connect = () => {
+    if (tenantId && userId) {
       const socketUrl = chatServiceHost + `/ws`;
       const socket = new SockJS(socketUrl);
 
@@ -36,7 +36,7 @@ const AgentChat = () => {
           // Subscribe to customer chat messages
           client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
 
-          // Subscribe to customer_waiting channel
+          // Subscribe to customer waiting channel
           client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived, { ack: 'client-individual' });
 
           // Notify server that agent has joined
@@ -50,6 +50,7 @@ const AgentChat = () => {
             }),
           });
 
+          setIsConnected(true); // Mark as connected
         },
         onStompError: (frame) => {
           console.error("Broker reported error: " + frame.headers["message"]);
@@ -62,14 +63,16 @@ const AgentChat = () => {
 
       client.activate();
       clientRef.current = client;
-
-      return () => {
-        if (clientRef.current) {
-          clientRef.current.deactivate();
-        }
-      };
     }
-  }, [tenantId, userId]);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (clientRef.current) {
+        clientRef.current.deactivate();
+      }
+    };
+  }, []);
 
   const onNewCustomerReceived = (payload) => {
     const message = JSON.parse(payload.body);
@@ -168,7 +171,7 @@ const AgentChat = () => {
           <button
             onClick={() => {
               if (tenantId && userId) {
-                setIsConnected(true);
+                connect(); // Trigger connection logic here
               } else {
                 alert("Please enter both Tenant ID and User ID");
               }
