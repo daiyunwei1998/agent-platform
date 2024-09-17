@@ -199,7 +199,7 @@ const AgentChat = () => {
                     active={customerId === selectedCustomer}
                     onClick={() => {
                       setSelectedCustomer(customerId);
-                      loadOfflineMessages(customerId);
+                      //loadOfflineMessages(customerId);
                       acknowledgeMessage(customerId);
                     }}
                   >
