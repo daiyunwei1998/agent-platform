@@ -13,71 +13,73 @@ const AgentChat = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [assignedCustomers, setAssignedCustomers] = useState([]);
   const [waitingCustomers, setWaitingCustomers] = useState([]);
+  const [tenantId, setTenantId] = useState(""); // Tenant ID state
+  const [userId, setUserId] = useState(""); // User ID state
+  const [isConnected, setIsConnected] = useState(false); // Track connection status
   const clientRef = useRef(null);
   const messageRefs = useRef({}); 
 
-  const tenantId = "tenant1";
-  const userId = "agent1";
-
   useEffect(() => {
-    const socketUrl = chatServiceHost + `/ws`;
-    const socket = new SockJS(socketUrl);
+    if (tenantId && userId) {
+      const socketUrl = chatServiceHost + `/ws`;
+      const socket = new SockJS(socketUrl);
 
-    const client = new Client({
-      webSocketFactory: () => socket,
-      reconnectDelay: 5000,
-      onConnect: () => {
-        console.log("Connected");
+      const client = new Client({
+        webSocketFactory: () => socket,
+        reconnectDelay: 5000,
+        onConnect: () => {
+          console.log("Connected");
 
-        // Subscribe to customer join events
-        client.subscribe(`/topic/${tenantId}.new_customer`, onNewCustomerReceived);
+          // Subscribe to customer join events
+          client.subscribe(`/topic/${tenantId}.new_customer`, onNewCustomerReceived);
 
-        // Subscribe to customer chat messages
-        client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
+          // Subscribe to customer chat messages
+          client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
 
-        // Subscribe to customer_waiting channel
-        client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived, { ack: 'client-individual' });
+          // Subscribe to customer_waiting channel
+          client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived, { ack: 'client-individual' });
 
-        // Notify server that agent has joined
-        client.publish({
-          destination: "/app/chat.addUser",
-          body: JSON.stringify({
-            sender: userId,
-            type: "JOIN",
-            tenant_id: tenantId,
-            user_type: "agent",
-          }),
-        });
-      },
-      onStompError: (frame) => {
-        console.error("Broker reported error: " + frame.headers["message"]);
-        console.error("Additional details: " + frame.body);
-      },
-      debug: (str) => {
-        console.log(str);
-      },
-    });
+          // Notify server that agent has joined
+          client.publish({
+            destination: "/app/chat.addUser",
+            body: JSON.stringify({
+              sender: userId,
+              type: "JOIN",
+              tenant_id: tenantId,
+              user_type: "agent",
+            }),
+          });
 
-    client.activate();
-    clientRef.current = client;
+          setIsConnected(true); // Set connected state
+        },
+        onStompError: (frame) => {
+          console.error("Broker reported error: " + frame.headers["message"]);
+          console.error("Additional details: " + frame.body);
+        },
+        debug: (str) => {
+          console.log(str);
+        },
+      });
 
-    return () => {
-      if (clientRef.current) {
-        clientRef.current.deactivate();
-      }
-    };
+      client.activate();
+      clientRef.current = client;
+
+      return () => {
+        if (clientRef.current) {
+          clientRef.current.deactivate();
+        }
+      };
+    }
   }, [tenantId, userId]);
 
   const onNewCustomerReceived = (payload) => {
     const message = JSON.parse(payload.body);
     console.log("Received new customer join message:", message);
 
-    // Add to assignedCustomers if not already present
     if (message.sender && !assignedCustomers.includes(message.sender)) {
       setAssignedCustomers((prevCustomers) => [...prevCustomers, message.sender]);
     }
 
-    // Initialize chat messages or other logic (from persisted chat history)
     setMessages((prevMessages) => [...prevMessages, message]);
   };
 
@@ -92,7 +94,6 @@ const AgentChat = () => {
     const message = JSON.parse(payload.body);
     console.log("Received customer waiting message:", message);
 
-    // Store the message reference for acknowledgment later
     messageRefs.current[message.customer_id] = payload;
 
     if (message.customer_id && !waitingCustomers.includes(message.customer_id)) {
@@ -104,14 +105,12 @@ const AgentChat = () => {
     const message = messageRefs.current[customerId];
 
     if (message) {
-      console.log(message);
       try {
         message.ack();
         console.log(`Acknowledged message for customer: ${customerId}`);
       } catch (error) {
         console.error(`Failed to acknowledge message for customer: ${customerId}`, error);
       }
-      // Remove the reference after acknowledgment
       delete messageRefs.current[customerId];
     }
   };
@@ -119,24 +118,21 @@ const AgentChat = () => {
   const sendMessage = () => {
     if (messageInput.trim() !== "" && clientRef.current && selectedCustomer) {
       const chatMessage = {
-        sender: userId,             // Agent's ID, e.g., "agent1"
-        content: messageInput,      // Message content
+        sender: userId,
+        content: messageInput,
         type: "CHAT",
-        tenant_id: tenantId,         // "tenant1"
-        receiver: selectedCustomer, // Target customer's ID, e.g., "customer1"
+        tenant_id: tenantId,
+        receiver: selectedCustomer,
         user_type: "agent",
       };
 
-      // Append the sent message to the messages state
       setMessages((prevMessages) => [...prevMessages, chatMessage]);
 
-      // Publish the message to the server
       clientRef.current.publish({
         destination: "/app/chat.sendMessage",
         body: JSON.stringify(chatMessage),
       });
 
-      // Clear the input field after sending the message
       setMessageInput("");
     }
   };
@@ -155,74 +151,105 @@ const AgentChat = () => {
   return (
     <div>
       <h2>Agent Chat</h2>
-      <div style={{ display: "flex" }}>
-        <div style={{ width: "20%", borderRight: "1px solid #ccc", padding: "10px" }}>
-          <h3>Assigned Customers</h3>
-          <ul>
-            {assignedCustomers.map((customerId) => (
-              <li key={customerId}>
-                <button
-                  onClick={() => {
-                    setSelectedCustomer(customerId);
-                    loadOfflineMessages(customerId);
-                    acknowledgeMessage(customerId);
-                  }}
+
+      {!isConnected && (
+        <div>
+          <input
+            type="text"
+            placeholder="Enter Tenant ID"
+            value={tenantId}
+            onChange={(e) => setTenantId(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Enter User ID"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+          />
+          <button
+            onClick={() => {
+              if (tenantId && userId) {
+                setIsConnected(true);
+              } else {
+                alert("Please enter both Tenant ID and User ID");
+              }
+            }}
+          >
+            Connect
+          </button>
+        </div>
+      )}
+
+      {isConnected && (
+        <div style={{ display: "flex" }}>
+          <div style={{ width: "20%", borderRight: "1px solid #ccc", padding: "10px" }}>
+            <h3>Assigned Customers</h3>
+            <ul>
+              {assignedCustomers.map((customerId) => (
+                <li key={customerId}>
+                  <button
+                    onClick={() => {
+                      setSelectedCustomer(customerId);
+                      loadOfflineMessages(customerId);
+                      acknowledgeMessage(customerId);
+                    }}
+                    style={{
+                      backgroundColor: waitingCustomers.includes(customerId)
+                        ? "yellow"
+                        : "white",
+                    }}
+                  >
+                    {customerId}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div style={{ width: "80%", padding: "10px" }}>
+            {selectedCustomer ? (
+              <>
+                <h3>Chat with {selectedCustomer}</h3>
+                <div
                   style={{
-                    backgroundColor: waitingCustomers.includes(customerId)
-                      ? "yellow" // Highlight customers who are in the waiting state
-                      : "white",
+                    border: "1px solid #ccc",
+                    height: "300px",
+                    overflowY: "scroll",
+                    padding: "10px",
                   }}
                 >
-                  {customerId}
+                  {messages
+                    .filter(
+                      (msg) =>
+                        (msg.sender === selectedCustomer && msg.receiver === userId) ||
+                        (msg.sender === userId && msg.receiver === selectedCustomer)
+                    )
+                    .map((msg, idx) => (
+                      <div key={idx}>
+                        <strong>{msg.sender}: </strong>
+                        <span>{msg.content}</span>
+                      </div>
+                    ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Type your message..."
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") sendMessage();
+                  }}
+                  style={{ width: "80%", padding: "10px" }}
+                />
+                <button onClick={sendMessage} style={{ padding: "10px" }}>
+                  Send
                 </button>
-              </li>
-            ))}
-          </ul>
+              </>
+            ) : (
+              <p>Select a customer to start chatting.</p>
+            )}
+          </div>
         </div>
-        <div style={{ width: "80%", padding: "10px" }}>
-          {selectedCustomer ? (
-            <>
-              <h3>Chat with {selectedCustomer}</h3>
-              <div
-                style={{
-                  border: "1px solid #ccc",
-                  height: "300px",
-                  overflowY: "scroll",
-                  padding: "10px",
-                }}
-              >
-                {messages
-                  .filter(
-                    (msg) =>
-                      (msg.sender === selectedCustomer && msg.receiver === userId) || // Messages from the customer to the agent
-                      (msg.sender === userId && msg.receiver === selectedCustomer)    // Messages from the agent to the customer
-                  )
-                  .map((msg, idx) => (
-                    <div key={idx}>
-                      <strong>{msg.sender}: </strong>
-                      <span>{msg.content}</span>
-                    </div>
-                  ))}
-              </div>
-              <input
-                type="text"
-                placeholder="Type your message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === "Enter") sendMessage();
-                }}
-                style={{ width: "80%", padding: "10px" }}
-              />
-              <button onClick={sendMessage} style={{ padding: "10px" }}>
-                Send
-              </button>
-            </>
-          ) : (
-            <p>Select a customer to start chatting.</p>
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 };
