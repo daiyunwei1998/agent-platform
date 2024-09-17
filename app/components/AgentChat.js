@@ -5,6 +5,8 @@ import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import axios from "axios";
 
+const chatServiceHost = process.env.CHAT_SERVICE_HOST || 'http://localhost:8080';
+
 const AgentChat = () => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
@@ -18,7 +20,7 @@ const AgentChat = () => {
   const userId = "agent1";
 
   useEffect(() => {
-    const socketUrl = `http://localhost:8080/ws`;
+    const socketUrl = chatServiceHost + `/ws`;
     const socket = new SockJS(socketUrl);
 
     const client = new Client({
