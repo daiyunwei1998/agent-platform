@@ -20,7 +20,7 @@ const AgentChat = () => {
   const messageRefs = useRef({}); 
 
   useEffect(() => {
-    if (tenantId && userId) {
+    if (tenantId && userId && isConnected) {
       const socketUrl = chatServiceHost + `/ws`;
       const socket = new SockJS(socketUrl);
 
