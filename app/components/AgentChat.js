@@ -12,6 +12,7 @@ const AgentChat = () => {
   const [assignedCustomers, setAssignedCustomers] = useState([]);
   const [waitingCustomers, setWaitingCustomers] = useState([]);
   const clientRef = useRef(null);
+  const messageRefs = useRef({}); 
 
   const tenantId = "tenant1";
   const userId = "agent1";
@@ -33,7 +34,7 @@ const AgentChat = () => {
         client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
 
         // Subscribe to customer_waiting channel
-        client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived);
+        client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived, { ack: 'client-individual' });
 
         // Notify server that agent has joined
         client.publish({
@@ -88,8 +89,28 @@ const AgentChat = () => {
   const onCustomerWaitingReceived = (payload) => {
     const message = JSON.parse(payload.body);
     console.log("Received customer waiting message:", message);
+
+    // Store the message reference for acknowledgment later
+    messageRefs.current[message.customer_id] = payload;
+
     if (message.customer_id && !waitingCustomers.includes(message.customer_id)) {
       setWaitingCustomers((prevCustomers) => [...prevCustomers, message.customer_id]);
+    }
+  };
+
+  const acknowledgeMessage = (customerId) => {
+    const message = messageRefs.current[customerId];
+
+    if (message) {
+      console.log(message);
+      try {
+        message.ack();
+        console.log(`Acknowledged message for customer: ${customerId}`);
+      } catch (error) {
+        console.error(`Failed to acknowledge message for customer: ${customerId}`, error);
+      }
+      // Remove the reference after acknowledgment
+      delete messageRefs.current[customerId];
     }
   };
 
@@ -142,6 +163,7 @@ const AgentChat = () => {
                   onClick={() => {
                     setSelectedCustomer(customerId);
                     loadOfflineMessages(customerId);
+                    acknowledgeMessage(customerId);
                   }}
                   style={{
                     backgroundColor: waitingCustomers.includes(customerId)
