@@ -135,6 +135,8 @@ const AgentChat = () => {
         body: JSON.stringify(chatMessage),
       });
 
+      console.log("sending messages:"+chatMessage);
+
       setMessageInput("");
     }
   };
@@ -222,7 +224,7 @@ const AgentChat = () => {
                   {messages
                     .filter(
                       (msg) =>
-                        (msg.sender === selectedCustomer && msg.receiver === userId) ||
+                        (msg.sender === selectedCustomer) ||
                         (msg.sender === userId && msg.receiver === selectedCustomer)
                     )
                     .map((msg, idx) => (
