@@ -10,6 +10,7 @@ const AgentChat = () => {
   const [messageInput, setMessageInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [assignedCustomers, setAssignedCustomers] = useState([]);
+  const [waitingCustomers, setWaitingCustomers] = useState([]);
   const clientRef = useRef(null);
 
   const tenantId = "tenant1";
@@ -31,14 +32,17 @@ const AgentChat = () => {
         // Subscribe to customer chat messages
         client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
 
+        // Subscribe to customer_waiting channel
+        client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived);
+
         // Notify server that agent has joined
         client.publish({
           destination: "/app/chat.addUser",
           body: JSON.stringify({
             sender: userId,
             type: "JOIN",
-            tenantId: tenantId,
-            userType: "agent",
+            tenant_id: tenantId,
+            user_type: "agent",
           }),
         });
       },
@@ -65,12 +69,12 @@ const AgentChat = () => {
     const message = JSON.parse(payload.body);
     console.log("Received new customer join message:", message);
 
-    // Assuming 'sender' is a unique and consistent customer identifier
+    // Add to assignedCustomers if not already present
     if (message.sender && !assignedCustomers.includes(message.sender)) {
       setAssignedCustomers((prevCustomers) => [...prevCustomers, message.sender]);
     }
 
-    // TODO initialize chat messages or other logic (from persisted chat history)
+    // Initialize chat messages or other logic (from persisted chat history)
     setMessages((prevMessages) => [...prevMessages, message]);
   };
 
@@ -81,26 +85,34 @@ const AgentChat = () => {
     setMessages((prevMessages) => [...prevMessages, message]);
   };
 
+  const onCustomerWaitingReceived = (payload) => {
+    const message = JSON.parse(payload.body);
+    console.log("Received customer waiting message:", message);
+    if (message.customer_id && !waitingCustomers.includes(message.customer_id)) {
+      setWaitingCustomers((prevCustomers) => [...prevCustomers, message.customer_id]);
+    }
+  };
+
   const sendMessage = () => {
     if (messageInput.trim() !== "" && clientRef.current && selectedCustomer) {
       const chatMessage = {
         sender: userId,             // Agent's ID, e.g., "agent1"
         content: messageInput,      // Message content
         type: "CHAT",
-        tenantId: tenantId,         // "tenant1"
+        tenant_id: tenantId,         // "tenant1"
         receiver: selectedCustomer, // Target customer's ID, e.g., "customer1"
-        userType: "agent",
+        user_type: "agent",
       };
-  
+
       // Append the sent message to the messages state
       setMessages((prevMessages) => [...prevMessages, chatMessage]);
-  
+
       // Publish the message to the server
       clientRef.current.publish({
         destination: "/app/chat.sendMessage",
         body: JSON.stringify(chatMessage),
       });
-  
+
       // Clear the input field after sending the message
       setMessageInput("");
     }
@@ -130,6 +142,11 @@ const AgentChat = () => {
                   onClick={() => {
                     setSelectedCustomer(customerId);
                     loadOfflineMessages(customerId);
+                  }}
+                  style={{
+                    backgroundColor: waitingCustomers.includes(customerId)
+                      ? "yellow" // Highlight customers who are in the waiting state
+                      : "white",
                   }}
                 >
                   {customerId}
@@ -162,7 +179,6 @@ const AgentChat = () => {
                       <span>{msg.content}</span>
                     </div>
                   ))}
-
               </div>
               <input
                 type="text"
