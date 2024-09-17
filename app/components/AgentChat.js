@@ -50,7 +50,6 @@ const AgentChat = () => {
             }),
           });
 
-          setIsConnected(true); // Set connected state
         },
         onStompError: (frame) => {
           console.error("Broker reported error: " + frame.headers["message"]);
