@@ -50,7 +50,7 @@ export default function LoginPage() {
 
   
     try {
-      const tenantResponse = await fetch(`${ternantServiceHost}/tenants/${alias}`, {
+      const tenantResponse = await fetch(`${ternantServiceHost}/api/v1/tenants/${alias}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
