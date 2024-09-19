@@ -20,7 +20,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FcGoogle } from 'react-icons/fc'
 import { Providers } from '../providers'
-import { chatServiceHost } from '@/app/config';
+import { chatServiceHost, ternantServiceHost } from '@/app/config';
 
 export default function LoginPage() {
   const [alias, setAlias] = useState('')
@@ -47,14 +47,42 @@ export default function LoginPage() {
     }
   
     setLoading(true)
+
   
     try {
+      const tenantResponse = await fetch(`${ternantServiceHost}/tenants/${alias}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      let tenantId;
+      if (tenantResponse.ok) {
+        const { tenant_id } = await tenantResponse.json();
+        tenantId = tenant_id;
+       
+      } else {
+        const data = await response.json()
+        setError(data.message || '無法驗證商戶')
+        toast({
+          title: '無法驗證商戶',
+          description: data.message || '請檢查商戶別名或註冊商戶',
+          status: 'error',
+          duration: 3000,
+          isClosable: true,
+        })
+      }
+      console.log("getting tenant id: " + tenantId);
       const response = await fetch(`${chatServiceHost}/api/v1/admin/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
         },
-        body: JSON.stringify({ alias, email, password }),
+        body: JSON.stringify({ 
+          "alias":alias,
+           "email":email, 
+           "password":password }),
       })
   
       if (response.ok) {
@@ -78,6 +106,7 @@ export default function LoginPage() {
         })
       }
     } catch (err) {
+      console.log(err)
       setError('伺服器錯誤，請稍後再試')
       toast({
         title: '伺服器錯誤',
