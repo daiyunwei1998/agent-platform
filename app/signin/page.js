@@ -1,4 +1,4 @@
-"use client";
+"use client"
 import React, { useState } from 'react';
 import {
   Box,
@@ -15,17 +15,22 @@ import {
   Progress,
   useToast,
   HStack,
+  Spinner,
+  InputGroup,
+  InputRightElement,
 } from '@chakra-ui/react';
 import { FcGoogle } from 'react-icons/fc';
+import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { Providers } from '../providers';
 import { chatServiceHost, ternantServiceHost } from '@/app/config';
 import { useRouter } from 'next/navigation';
 
-
 const TwoStepAccountCreationForm = () => {
   const [step, setStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [tenantId, setTenantId] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     tenant: '',
     tenantAlias: '',
@@ -49,10 +54,14 @@ const TwoStepAccountCreationForm = () => {
   };
 
   const handleNextStep = async () => {
-    if (!formData.tenant || !formData.tenantAlias || !formData.logo) {
+    const missingFields = [];
+    if (!formData.tenant) missingFields.push("商戶名稱");
+    if (!formData.tenantAlias) missingFields.push("商戶別名");
+
+    if (missingFields.length > 0) {
       toast({
-        title: "Required fields missing",
-        description: "Please fill in all fields and upload a logo.",
+        title: "商戶註冊資料不完整",
+        description: `請填寫以下欄位: ${missingFields.join(", ")}`,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -60,56 +69,92 @@ const TwoStepAccountCreationForm = () => {
       return;
     }
 
-    // Prepare form data for tenant registration
+    setIsLoading(true);
     const tenantData = new FormData();
     tenantData.append('name', formData.tenant);
     tenantData.append('alias', formData.tenantAlias);
-    tenantData.append('logo', formData.logo);
-
+    if (formData.logo) {
+      tenantData.append('logo', formData.logo);
+    }
     
     try {
-      // Send the tenant registration request
       const response = await fetch(ternantServiceHost+'/api/v1/tenants/', {
         method: 'POST',
-        body: tenantData, // multipart/form-data is automatically set by FormData
+        body: tenantData,
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        
+        // Check if 'detail' is present in the error response and contains 'error_code'
+        if (errorData.detail && errorData.detail.error_code) {
+          switch (errorData.detail.error_code) {
+            case "DUPLICATE_TENANT_NAME":
+              throw new Error("商戶名稱已被註冊");
+            case "DUPLICATE_TENANT_ALIAS":
+              throw new Error("商戶簡稱已被註冊");
+            default:
+              throw new Error(errorData.detail.message || "商戶註冊失敗");
+          }
+        }
+    
+        throw new Error("商戶註冊失敗，請聯繫客服");
+      }
 
       const { tenant_id } = await response.json();
       setTenantId(tenant_id);
-      console.log("registered tenantId:" + tenantId);
-
-      if (!response.ok) {
-        throw new Error("Failed to create tenant");
-      }
 
       toast({
-        title: "Tenant created",
-        description: "Tenant information has been successfully submitted.",
+        title: "商戶註冊成功",
+        description: "成功提交商戶註冊資料",
         status: "success",
         duration: 3000,
         isClosable: true,
       });
 
-      setStep(2); // Move to Step 2 after successful tenant creation
+      setStep(2);
     } catch (error) {
       console.error("Error creating tenant:", error);
       toast({
-        title: "Error",
-        description: "There was an error creating the tenant. Please try again.",
+        title: "商戶註冊失敗",
+        description: error.message || "There was an error creating the tenant. Please try again.",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteTenant = async () => {
+    try {
+      const response = await fetch(`${ternantServiceHost}/api/v1/tenants/${tenantId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete tenant");
+      }
+
+      console.log("Tenant deleted successfully");
+    } catch (error) {
+      console.error("Error deleting tenant:", error);
     }
   };
 
   const handleSubmitUser = async (e) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.password) {
+    const missingFields = [];
+    if (!formData.name) missingFields.push("姓名");
+    if (!formData.email) missingFields.push("電子郵件");
+    if (!formData.password) missingFields.push("密碼");
+
+    if (missingFields.length > 0) {
       toast({
-        title: "Required fields missing",
-        description: "Please fill in all fields.",
+        title: "用戶註冊資料不完整",
+        description: `請填寫以下欄位: ${missingFields.join(", ")}`,
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -117,23 +162,23 @@ const TwoStepAccountCreationForm = () => {
       return;
     }
 
-    // Prepare JSON payload for user registration
+    setIsLoading(true);
     const userData = {
       name: formData.name,
       email: formData.email,
       password: formData.password,
-      role:"ADMIN",
-      tenant_id:tenantId
+      role: "ADMIN",
+      tenant_id: tenantId
     };
 
     try {
-      // Send the user registration request
       const response = await fetch(chatServiceHost+`/api/v1/tenants/${tenantId}/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: JSON.stringify(userData), // Send JSON request bod
+        body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
@@ -147,7 +192,6 @@ const TwoStepAccountCreationForm = () => {
         duration: 3000,
         isClosable: true,
       });
-
      
       router.push('/dashboard');
     } catch (error) {
@@ -159,8 +203,14 @@ const TwoStepAccountCreationForm = () => {
         duration: 3000,
         isClosable: true,
       });
+      // Delete tenant if user creation fails
+      await deleteTenant();
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  const toggleShowPassword = () => setShowPassword(!showPassword);
 
   return (
     <Providers>
@@ -169,9 +219,9 @@ const TwoStepAccountCreationForm = () => {
           <Progress value={step === 1 ? 50 : 100} size="sm" colorScheme="blue" />
           <Box textAlign="center">
             <Image src="/agent.png" alt="Logo" boxSize="50px" mx="auto" mb={4} />
-            <Heading size="xl" mb={2}>Create an account</Heading>
+            <Heading size="xl" mb={2}>註冊賬戶</Heading>
             <Text fontSize="md" color="gray.600">
-              {step === 1 ? "Step 1: Company Information" : "Step 2: Admin Registration"}
+              {step === 1 ? "第一步: 註冊商戶資料" : "第二步: 新建管理員賬戶"}
             </Text>
           </Box>
 
@@ -179,19 +229,19 @@ const TwoStepAccountCreationForm = () => {
             {step === 1 ? (
               <>
                 <FormControl isRequired>
-                  <FormLabel>Tenant</FormLabel>
+                  <FormLabel>商戶名</FormLabel>
                   <Input name="tenant" value={formData.tenant} onChange={handleInputChange} placeholder="Enter tenant name" />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Tenant Alias</FormLabel>
+                  <FormLabel>商戶簡稱</FormLabel>
                   <Input name="tenantAlias" value={formData.tenantAlias} onChange={handleInputChange} placeholder="Enter tenant alias" />
                 </FormControl>
 
-                <FormControl isRequired>
-                  <FormLabel>Company Logo</FormLabel>
+                <FormControl>
+                  <FormLabel>商户 Logo</FormLabel>
                   <Button as="label" htmlFor="file-upload" colorScheme="blue" variant="outline" cursor="pointer" w="full">
-                    {formData.logo ? 'Logo uploaded' : 'Upload logo'}
+                    {formData.logo ? '已上傳 Logo' : '上傳 Logo'}
                     <Input
                       id="file-upload"
                       type="file"
@@ -202,36 +252,49 @@ const TwoStepAccountCreationForm = () => {
                   </Button>
                 </FormControl>
 
-                <Button colorScheme="blue" w="full" onClick={handleNextStep}>
-                  Next
+                <Button colorScheme="blue" w="full" onClick={handleNextStep} isLoading={isLoading}>
+                  {isLoading ? <Spinner size="sm" /> : "下一步"}
                 </Button>
               </>
             ) : (
               <>
                 <FormControl isRequired>
-                  <FormLabel>Name</FormLabel>
-                  <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="Enter your name" />
+                  <FormLabel>賬戶名</FormLabel>
+                  <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="請輸入用戶名" />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Email</FormLabel>
-                  <Input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email" />
+                  <FormLabel>郵箱</FormLabel>
+                  <Input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="請輸入電子信箱" />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Password</FormLabel>
-                  <Input name="password" type="password" value={formData.password} onChange={handleInputChange} placeholder="Enter your password" />
+                  <FormLabel>密碼</FormLabel>
+                  <InputGroup>
+                    <Input
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="請輸入密碼"
+                    />
+                    <InputRightElement width="4.5rem">
+                      <Button h="1.75rem" size="sm" onClick={toggleShowPassword}>
+                        {showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                      </Button>
+                    </InputRightElement>
+                  </InputGroup>
                   <Text fontSize="sm" color="gray.500" mt={1}>
-                    At least 8 characters long
+                    密碼規範（to be implemented）
                   </Text>
                 </FormControl>
 
                 <HStack w="full">
-                  <Button colorScheme="gray" w="full" onClick={() => setStep(1)}>
-                    Back
+                  <Button colorScheme="gray" w="full" onClick={() => setStep(1)} isDisabled={isLoading}>
+                    上一步
                   </Button>
-                  <Button colorScheme="blue" w="full" type="submit">
-                    Create account
+                  <Button colorScheme="blue" w="full" type="submit" isLoading={isLoading}>
+                    {isLoading ? <Spinner size="sm" /> : "Create account"}
                   </Button>
                 </HStack>
               </>
@@ -248,17 +311,21 @@ const TwoStepAccountCreationForm = () => {
                 w="full"
                 size="lg"
               >
-                Sign up with Google
+                使用 Google 登入
               </Button>
 
               <Text textAlign="center">
-                Already have an account?{' '}
+                已經有賬戶了?{' '}
                 <Button variant="link" colorScheme="blue">
-                  Log in
+                  登入
                 </Button>
               </Text>
             </>
           )}
+          
+          <Text fontSize="sm" color="gray.500" textAlign="center" mt={4}>
+            © 2024 閃應雲 All rights reserved.
+          </Text>
         </VStack>
       </Container>
     </Providers>
