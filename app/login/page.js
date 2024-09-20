@@ -20,7 +20,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { FcGoogle } from 'react-icons/fc'
 import { Providers } from '../providers'
-import { chatServiceHost, ternantServiceHost } from '@/app/config';
+import { chatServiceHost, tenantServiceHost } from '@/app/config';
 
 export default function LoginPage() {
   const [alias, setAlias] = useState('')
@@ -50,7 +50,7 @@ export default function LoginPage() {
 
   
     try {
-      const tenantResponse = await fetch(`${ternantServiceHost}/api/v1/tenants/${alias}`, {
+      const tenantResponse = await fetch(`${tenantServiceHost}/api/v1/tenants/${alias}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
