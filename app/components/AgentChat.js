@@ -156,7 +156,7 @@ const AgentChat = () => {
     }
   };
   return (
-    <div style={{ height: "500px" }}>
+    <div style={{ height: "calc(100vh - 72px)" }}>
       <MainContainer>
         {!isConnected ? (
           <div style={{ padding: "20px" }}>
