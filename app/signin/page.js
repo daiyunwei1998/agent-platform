@@ -92,7 +92,7 @@ const TwoStepAccountCreationForm = () => {
             case "DUPLICATE_TENANT_NAME":
               throw new Error("商戶名稱已被註冊");
             case "DUPLICATE_TENANT_ALIAS":
-              throw new Error("商戶簡稱已被註冊");
+              throw new Error("商戶代號已被註冊");
             default:
               throw new Error(errorData.detail.message || "商戶註冊失敗");
           }
@@ -230,12 +230,12 @@ const TwoStepAccountCreationForm = () => {
               <>
                 <FormControl isRequired>
                   <FormLabel>商戶名</FormLabel>
-                  <Input name="tenant" value={formData.tenant} onChange={handleInputChange} placeholder="Enter tenant name" />
+                  <Input name="tenant" value={formData.tenant} onChange={handleInputChange} placeholder="輸入商戶名稱" />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>商戶簡稱</FormLabel>
-                  <Input name="tenantAlias" value={formData.tenantAlias} onChange={handleInputChange} placeholder="Enter tenant alias" />
+                  <FormLabel>商戶代號</FormLabel>
+                  <Input name="tenantAlias" value={formData.tenantAlias} onChange={handleInputChange} placeholder="輸入商戶代號" />
                 </FormControl>
 
                 <FormControl>
@@ -294,7 +294,7 @@ const TwoStepAccountCreationForm = () => {
                     上一步
                   </Button>
                   <Button colorScheme="blue" w="full" type="submit" isLoading={isLoading}>
-                    {isLoading ? <Spinner size="sm" /> : "Create account"}
+                    {isLoading ? <Spinner size="sm" /> : "建立賬戶"}
                   </Button>
                 </HStack>
               </>
