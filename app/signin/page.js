@@ -22,7 +22,7 @@ import {
 import { FcGoogle } from 'react-icons/fc';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { Providers } from '../providers';
-import { chatServiceHost, ternantServiceHost } from '@/app/config';
+import { chatServiceHost, tenantServiceHost } from '@/app/config';
 import { useRouter } from 'next/navigation';
 
 const TwoStepAccountCreationForm = () => {
@@ -78,7 +78,7 @@ const TwoStepAccountCreationForm = () => {
     }
     
     try {
-      const response = await fetch(ternantServiceHost+'/api/v1/tenants/', {
+      const response = await fetch(tenantServiceHost+'/api/v1/tenants/', {
         method: 'POST',
         body: tenantData,
       });
@@ -129,7 +129,7 @@ const TwoStepAccountCreationForm = () => {
 
   const deleteTenant = async () => {
     try {
-      const response = await fetch(`${ternantServiceHost}/api/v1/tenants/${tenantId}`, {
+      const response = await fetch(`${tenantServiceHost}/api/v1/tenants/${tenantId}`, {
         method: 'DELETE',
       });
 
