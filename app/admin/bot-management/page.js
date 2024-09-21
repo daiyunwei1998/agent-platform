@@ -8,7 +8,7 @@ import { tenantServiceHost } from '@/app/config';
 
 const FileUpload = () => {
   const [files, setFiles] = useState([]);
-  const tenantId = '12345'; // Hardcoded tenant_id for now
+  const tenantId = 'tenant_2'; // Hardcoded tenant_id for now
   const [isUploading, setIsUploading] = useState(false);
   const toast = useToast();
 
