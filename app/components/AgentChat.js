@@ -17,66 +17,65 @@ import {
 import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
 import { chatServiceHost } from '@/app/config';
 
-const AgentChat = () => {
+const AgentChat = ({ tenantId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [assignedCustomers, setAssignedCustomers] = useState([]);
   const [waitingCustomers, setWaitingCustomers] = useState([]);
-  const [tenantId, setTenantId] = useState("");
-  const [userId, setUserId] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const clientRef = useRef(null);
   const messageRefs = useRef({});
 
-  const connect = () => {
-    if (tenantId && userId) {
-      const socketUrl = chatServiceHost + `/ws`;
-      const socket = new SockJS(socketUrl);
-
-      const client = new Client({
-        webSocketFactory: () => socket,
-        reconnectDelay: 5000,
-        onConnect: () => {
-          console.log("Connected");
-
-          client.subscribe(`/topic/${tenantId}.new_customer`, onNewCustomerReceived);
-          client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
-          client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived, { ack: 'client-individual' });
-
-          client.publish({
-            destination: "/app/chat.addUser",
-            body: JSON.stringify({
-              sender: userId,
-              type: "JOIN",
-              tenant_id: tenantId,
-              user_type: "agent",
-            }),
-          });
-
-          setIsConnected(true);
-        },
-        onStompError: (frame) => {
-          console.error("Broker reported error: " + frame.headers["message"]);
-          console.error("Additional details: " + frame.body);
-        },
-        debug: (str) => {
-          console.log(str);
-        },
-      });
-
-      client.activate();
-      clientRef.current = client;
-    }
-  };
-
   useEffect(() => {
+    connect();
     return () => {
       if (clientRef.current) {
         clientRef.current.deactivate();
       }
     };
   }, []);
+
+  const connect = () => {
+    console.log(`Connect with credential: Tenant ID: ${tenantId}, User ID: ${userId}, Username: ${userName}`);
+
+    const socketUrl = chatServiceHost + `/ws`;
+    const socket = new SockJS(socketUrl);
+
+    const client = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        console.log("Connected");
+
+        client.subscribe(`/topic/${tenantId}.new_customer`, onNewCustomerReceived);
+        client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
+        client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived, { ack: 'client-individual' });
+
+        client.publish({
+          destination: "/app/chat.addUser",
+          body: JSON.stringify({
+            sender: userId,
+            type: "JOIN",
+            tenant_id: tenantId,
+            user_type: "agent",
+          }),
+        });
+
+        setIsConnected(true);
+      },
+      onStompError: (frame) => {
+        console.error("Broker reported error: " + frame.headers["message"]);
+        console.error("Additional details: " + frame.body);
+      },
+      debug: (str) => {
+        console.log(str);
+      },
+    });
+
+    client.activate();
+    clientRef.current = client;
+  };
 
   const onNewCustomerReceived = (payload) => {
     const message = JSON.parse(payload.body);
@@ -139,7 +138,7 @@ const AgentChat = () => {
         body: JSON.stringify(chatMessage),
       });
 
-      console.log("sending messages:" + chatMessage);
+      console.log("sending messages:", chatMessage);
 
       setMessageInput("");
     }
@@ -155,98 +154,64 @@ const AgentChat = () => {
       console.error("Error loading offline messages:", error);
     }
   };
+
   return (
     <div style={{ height: "calc(100vh - 72px)" }}>
       <MainContainer>
-        {!isConnected ? (
-          <div style={{ padding: "20px" }}>
-            <input
-              type="text"
-              placeholder="Enter Tenant ID"
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              style={{ marginBottom: "10px", padding: "5px" }}
-            />
-            <input
-              type="text"
-              placeholder="Enter User ID"
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              style={{ marginBottom: "10px", padding: "5px" }}
-            />
-            <button
-              onClick={() => {
-                if (tenantId && userId) {
-                  connect();
-                } else {
-                  alert("Please enter both Tenant ID and User ID");
-                }
-              }}
-              style={{ padding: "5px 10px" }}
-            >
-              Connect
-            </button>
-          </div>
-        ) : (
-          <>
-            <Sidebar position="left" scrollable={false}>
-              <ConversationList>
-                {assignedCustomers.map((customerId) => (
-                  <Conversation
-                    key={customerId}
-                    name={customerId}
-                    info={waitingCustomers.includes(customerId) ? "Waiting" : ""}
-                    active={customerId === selectedCustomer}
-                    onClick={() => {
-                      setSelectedCustomer(customerId);
-                      //loadOfflineMessages(customerId);
-                      acknowledgeMessage(customerId);
-                    }}
-                  >
-                    <Avatar src = "/user.png" name={customerId} status={waitingCustomers.includes(customerId) ? "available" : "dnd"} />
-                  </Conversation>
-                ))}
-              </ConversationList>
-            </Sidebar>
-            <ChatContainer>
-              <MessageList>
-                {messages
-                  .filter(
-                    (msg) =>
-                      msg.type == "CHAT" &&
-                      ((msg.sender === selectedCustomer) ||
-                      (msg.sender === userId && msg.receiver === selectedCustomer))
-                  )
-                  .map((msg, idx) => (
-                    <Message
-                      key={idx}
-                      model={{
-                        message: msg.content,
-                        sentTime: "just now",
-                        sender: msg.sender,
-                        direction: msg.sender === userId ? "outgoing" : "incoming",
-                        position: "normal",
-                      }}>
-
-                      <Message.Header sender={msg.sender} />
-                      <Avatar
-                        src={msg.sender === userId ? "/agent.png" : "/user.png"}
-                        name={msg.sender}
-                      />
-            
-                      </Message>
-                  ))}
-              </MessageList>
-              <MessageInput
-                placeholder="Type message here"
-                value={messageInput}
-                onChange={(val) => setMessageInput(val)}
-                onSend={sendMessage}
-                attachButton={false}
-              />
-            </ChatContainer>
-          </>
-        )}
+        <Sidebar position="left" scrollable={false}>
+          <ConversationList>
+            {assignedCustomers.map((customerId) => (
+              <Conversation
+                key={customerId}
+                name={customerId}
+                info={waitingCustomers.includes(customerId) ? "Waiting" : ""}
+                active={customerId === selectedCustomer}
+                onClick={() => {
+                  setSelectedCustomer(customerId);
+                  //loadOfflineMessages(customerId);
+                  acknowledgeMessage(customerId);
+                }}
+              >
+                <Avatar src="/user.png" name={customerId} status={waitingCustomers.includes(customerId) ? "available" : "dnd"} />
+              </Conversation>
+            ))}
+          </ConversationList>
+        </Sidebar>
+        <ChatContainer>
+          <MessageList>
+            {messages
+              .filter(
+                (msg) =>
+                  msg.type === "CHAT" &&
+                  ((msg.sender === selectedCustomer) ||
+                  (msg.sender === userId && msg.receiver === selectedCustomer))
+              )
+              .map((msg, idx) => (
+                <Message
+                  key={idx}
+                  model={{
+                    message: msg.content,
+                    sentTime: "just now",
+                    sender: msg.sender === userId ? userName : msg.sender,
+                    direction: msg.sender === userId ? "outgoing" : "incoming",
+                    position: "normal",
+                  }}>
+                  <Message.Header sender={msg.sender === userId ? userName : msg.sender} />
+                  <Avatar
+                    src={msg.sender === userId ? "/agent.png" : "/user.png"}
+                    name={msg.sender === userId ? userName : msg.sender}
+                  />
+                </Message>
+              ))}
+          </MessageList>
+          <MessageInput
+            placeholder="Type message here"
+            value={messageInput}
+            onChange={(val) => setMessageInput(val)}
+            onSend={sendMessage}
+            attachButton={false}
+          />
+        </ChatContainer>
       </MainContainer>
     </div>
   );
