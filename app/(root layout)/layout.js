@@ -4,6 +4,8 @@ import NavBar from '@/app/components/NavBar';
 import { Providers } from '@/app/components/providers';
 import { headers, cookies } from 'next/headers';
 import { host, tenantServiceHost } from '@/app/config';
+import NavbarWrapper from '../components/CookieProvider';
+
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -64,7 +66,7 @@ export default async function RootLayout({ children }) {
 
   const cookieStore = cookies();
   const tenantCookie = cookieStore.get('tenantId');
-  const tenantId = tenantCookie.value;
+  const tenantId = tenantCookie?.value;
 
   const fetchedTenantData = await fetchTenantData(tenantId);
   
@@ -87,7 +89,7 @@ export default async function RootLayout({ children }) {
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Providers>
-          <NavBar logo={tenantInfo.logo} name={tenantInfo.name} />
+        <NavbarWrapper logo={tenantInfo.logo} name={tenantInfo.name}/>
           {children}
         </Providers>
       </body>
