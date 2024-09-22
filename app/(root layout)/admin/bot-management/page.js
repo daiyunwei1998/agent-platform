@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Box, Button, Text, Icon, useColorModeValue, Stack, useToast } from '@chakra-ui/react';
 import { useDropzone } from 'react-dropzone';
 import { MdCloudUpload, MdOutlineFilePresent } from 'react-icons/md';
-import { Providers } from '@/app/providers';
+import { Providers } from '@/app/components/providers';
 import { tenantServiceHost } from '@/app/config';
 
 const FileUpload = () => {

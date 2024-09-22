@@ -1,7 +1,7 @@
 import localFont from 'next/font/local';
 import './globals.css';
-import NavBar from './components/NavBar';
-import { Providers } from './providers';
+import NavBar from '@/app/components/NavBar';
+import { Providers } from '@/app/components/providers';
 import { headers } from 'next/headers';
 import { host, tenantServiceHost } from '@/app/config';
 
@@ -26,7 +26,10 @@ async function fetchTenantData(alias) {
   try {
     console.log(`Fetching tenant info from: ${tenantServiceHost}/api/v1/tenants/${alias}`);
 
-    const response = await fetch(`${tenantServiceHost}/api/v1/tenants/${alias}`, {});
+    const params = new URLSearchParams();
+    params.append('alias', alias);
+
+    const response = await fetch(`${tenantServiceHost}/api/v1/tenants/check?${params.toString()}`);
     
     if (!response.ok) {
       console.error(`Tenant not found for alias: ${alias}. Status: ${response.status}`);
@@ -36,7 +39,7 @@ async function fetchTenantData(alias) {
     const data = await response.json();
     console.log('Received tenant data:', data);
 
-    return data;
+    return data.data;
   } catch (error) {
     console.error(`Error fetching tenant data for alias: ${alias}`, error);
     return null;

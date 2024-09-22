@@ -21,11 +21,11 @@ import {
 } from '@chakra-ui/react';
 import { FcGoogle } from 'react-icons/fc';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
-import { Providers } from '../providers';
+import { Providers } from '@/app/components/providers';
 import { chatServiceHost, tenantServiceHost } from '@/app/config';
 import { useRouter } from 'next/navigation';
 
-const TwoStepAccountCreationForm = () => {
+const Signin = () => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -53,6 +53,20 @@ const TwoStepAccountCreationForm = () => {
     }
   };
 
+  const checkTenantExists = async () => {
+    const params = new URLSearchParams();
+    if (formData.tenant) params.append('name', formData.tenant);
+    if (formData.tenantAlias) params.append('alias', formData.tenantAlias);
+
+    try {
+      const response = await fetch(`${tenantServiceHost}/api/v1/tenants/check?${params.toString()}`);
+      return response.ok;
+    } catch (error) {
+      console.error("Error checking tenant existence:", error);
+      return false;
+    }
+  };
+
   const handleNextStep = async () => {
     const missingFields = [];
     if (!formData.tenant) missingFields.push("商戶名稱");
@@ -70,76 +84,41 @@ const TwoStepAccountCreationForm = () => {
     }
 
     setIsLoading(true);
-    const tenantData = new FormData();
-    tenantData.append('name', formData.tenant);
-    tenantData.append('alias', formData.tenantAlias);
-    if (formData.logo) {
-      tenantData.append('logo', formData.logo);
-    }
-    
-    try {
-      const response = await fetch(tenantServiceHost+'/api/v1/tenants/', {
-        method: 'POST',
-        body: tenantData,
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        // Check if 'detail' is present in the error response and contains 'error_code'
-        if (errorData.detail && errorData.detail.error_code) {
-          switch (errorData.detail.error_code) {
-            case "DUPLICATE_TENANT_NAME":
-              throw new Error("商戶名稱已被註冊");
-            case "DUPLICATE_TENANT_ALIAS":
-              throw new Error("商戶代號已被註冊");
-            default:
-              throw new Error(errorData.detail.message || "商戶註冊失敗");
-          }
-        }
-    
-        throw new Error("商戶註冊失敗，請聯繫客服");
-      }
-
-      const { tenant_id } = await response.json();
-      setTenantId(tenant_id);
-
+    const tenantExists = await checkTenantExists();
+    if (tenantExists) {
       toast({
-        title: "商戶註冊成功",
-        description: "成功提交商戶註冊資料",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-
-      setStep(2);
-    } catch (error) {
-      console.error("Error creating tenant:", error);
-      toast({
-        title: "商戶註冊失敗",
-        description: error.message || "There was an error creating the tenant. Please try again.",
+        title: "商戶已存在",
+        description: "該商戶名稱或別名已被註冊，請更換後重試",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
-    } finally {
       setIsLoading(false);
+      return;
     }
+
+    setStep(2);
+    setIsLoading(false);
   };
 
   const deleteTenant = async () => {
     try {
-      const response = await fetch(`${tenantServiceHost}/api/v1/tenants/${tenantId}`, {
+      await fetch(`${tenantServiceHost}/api/v1/tenants/${tenantId}`, {
         method: 'DELETE',
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete tenant");
-      }
-
-      console.log("Tenant deleted successfully");
     } catch (error) {
       console.error("Error deleting tenant:", error);
+    }
+  };
+
+  const deleteUser = async (tenantId, userId) => {
+    try {
+      await fetch(`${chatServiceHost}/api/v1/tenants/${tenantId}/users/${userId}`, {
+        method: 'DELETE',
+      });
+    } catch (error) {
+      console.error("Error deleting user:", error);
     }
   };
 
@@ -163,16 +142,33 @@ const TwoStepAccountCreationForm = () => {
     }
 
     setIsLoading(true);
-    const userData = {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: "ADMIN",
-      tenant_id: tenantId
-    };
+    const tenantData = new FormData();
+    tenantData.append('name', formData.tenant);
+    tenantData.append('alias', formData.tenantAlias);
+    if (formData.logo) tenantData.append('logo', formData.logo);
 
     try {
-      const response = await fetch(chatServiceHost+`/api/v1/tenants/${tenantId}/users/register`, {
+      const tenantResponse = await fetch(`${tenantServiceHost}/api/v1/tenants/`, {
+        method: 'POST',
+        body: tenantData,
+      });
+
+      if (!tenantResponse.ok) {
+        throw new Error("商戶註冊失敗");
+      }
+
+      const { tenant_id } = await tenantResponse.json();
+      setTenantId(tenant_id);
+
+      const userData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        role: "ADMIN",
+        tenant_id: tenant_id,
+      };
+
+      const userResponse = await fetch(`${chatServiceHost}/api/v1/tenants/${tenant_id}/users/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,8 +177,8 @@ const TwoStepAccountCreationForm = () => {
         body: JSON.stringify(userData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to create user");
+      if (!userResponse.ok) {
+        throw new Error("用戶註冊失敗");
       }
 
       toast({
@@ -192,18 +188,17 @@ const TwoStepAccountCreationForm = () => {
         duration: 3000,
         isClosable: true,
       });
-     
+
       router.push('/dashboard');
     } catch (error) {
       console.error("Error creating user:", error);
       toast({
         title: "Error",
-        description: "There was an error creating your account. Please try again.",
+        description: error.message || "There was an error creating your account. Please try again.",
         status: "error",
         duration: 3000,
         isClosable: true,
       });
-      // Delete tenant if user creation fails
       await deleteTenant();
     } finally {
       setIsLoading(false);
@@ -332,4 +327,4 @@ const TwoStepAccountCreationForm = () => {
   );
 };
 
-export default TwoStepAccountCreationForm;
+export default Signin;

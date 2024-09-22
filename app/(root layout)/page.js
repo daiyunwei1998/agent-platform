@@ -1,6 +1,6 @@
 import Image from "next/image";
 import styles from "./page.module.css";
-import AgentChat from "./components/AgentChat";
+import AgentChat from "@/app/components/AgentChat";
 
 export default function Home() {
   return (
