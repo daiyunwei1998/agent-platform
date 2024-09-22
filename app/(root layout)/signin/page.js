@@ -102,15 +102,6 @@ const Signin = () => {
     setIsLoading(false);
   };
 
-  const deleteTenant = async () => {
-    try {
-      await fetch(`${tenantServiceHost}/api/v1/tenants/${tenantId}`, {
-        method: 'DELETE',
-      });
-    } catch (error) {
-      console.error("Error deleting tenant:", error);
-    }
-  };
 
   const deleteUser = async (tenantId, userId) => {
     try {
@@ -165,7 +156,7 @@ const Signin = () => {
         email: formData.email,
         password: formData.password,
         role: "ADMIN",
-        tenant_id: tenant_id,
+        tenant_id: tenantId,
       };
 
       const userResponse = await fetch(`${chatServiceHost}/api/v1/tenants/${tenant_id}/users/register`, {
@@ -192,6 +183,19 @@ const Signin = () => {
       router.push('/dashboard');
     } catch (error) {
       console.error("Error creating user:", error);
+      console.log(`${tenantServiceHost}/api/v1/tenants/${tenantId}`)
+      if (tenantId) {
+        console.log(`${tenantServiceHost}/api/v1/tenants/${tenantId}`)
+        try {
+          await fetch(`${tenantServiceHost}/api/v1/tenants/${tenantId}`, {
+            method: 'DELETE',
+          });
+          console.log("Tenant deleted due to user registration failure");
+        } catch (error) {
+          console.error("Error deleting tenant:", error);
+        }
+      }
+      
       toast({
         title: "Error",
         description: error.message || "There was an error creating your account. Please try again.",
@@ -199,7 +203,6 @@ const Signin = () => {
         duration: 3000,
         isClosable: true,
       });
-      await deleteTenant();
     } finally {
       setIsLoading(false);
     }
