@@ -233,7 +233,7 @@ const Signin = () => {
 
                 <FormControl isRequired>
                   <FormLabel>商戶代號</FormLabel>
-                  <Input name="tenantAlias" value={formData.tenantAlias} onChange={handleInputChange} placeholder="輸入商戶代號" />
+                  <Input name="tenantAlias" value={formData.tenantAlias} onChange={handleInputChange} placeholder="輸入商戶代號" maxLength={10} />
                 </FormControl>
 
                 <FormControl>
