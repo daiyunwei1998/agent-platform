@@ -1,20 +1,21 @@
 import { headers } from 'next/headers';
 import { host, tenantServiceHost } from '@/app/config';
-
+import { getCookie } from 'cookies-next';
 
 const DEFAULT_TENANT_INFO = {
   logo: '/agent.png',
   name: '閃應雲客服平台',
 };
 
-async function fetchTenantData(alias) {
+async function fetchTenantData(tenantId) {
   try {
-    console.log(`Fetching tenant info from: ${tenantServiceHost}/api/v1/tenants/${alias}`);
+    const params = new URLSearchParams();
+    params.append('tenant_id', tenantId);
 
-    const response = await fetch(`${tenantServiceHost}/api/v1/tenants/${alias}`, {});
+    const response = await fetch(`${tenantServiceHost}/api/v1/tenants/find?${params.toString()}`, {});
     
     if (!response.ok) {
-      console.error(`Tenant not found for alias: ${alias}. Status: ${response.status}`);
+      console.error(`Tenant not found for alias: ${tenantId}. Status: ${response.status}`);
       return null;
     }
 
@@ -23,7 +24,7 @@ async function fetchTenantData(alias) {
 
     return data;
   } catch (error) {
-    console.error(`Error fetching tenant data for alias: ${alias}`, error);
+    console.error(`Error fetching tenant data for alias: ${tenantId}`, error);
     return null;
   }
 }
@@ -46,14 +47,29 @@ export default async function RootLayout({ children }) {
   
   let tenantInfo = DEFAULT_TENANT_INFO;
   
-  if (currentHost !== new URL(host).hostname) {
-    const alias = currentHost.split('.')[0];
-    console.log(`Extracted alias: ${alias}`);
+  // if (currentHost !== new URL(host).hostname) {
+  //   const alias = currentHost.split('.')[0];
+  //   console.log(`Extracted alias: ${alias}`);
     
-    const fetchedTenantData = await fetchTenantData(alias);
+  //   const fetchedTenantData = await fetchTenantData(alias);
+  //   tenantInfo = processTenantData(fetchedTenantData);
+    
+  //   console.log(`Using tenant info for alias: ${alias}`, tenantInfo);
+  // } else {
+  //   console.log('Using default tenant info for main domain');
+  // }
+
+  const tenantId = getCookie('tenantId');
+  console.log(tenantId);
+
+  const fetchedTenantData = await fetchTenantData(tenantId);
+  
+
+  if (fetchedTenantData) {
+
     tenantInfo = processTenantData(fetchedTenantData);
     
-    console.log(`Using tenant info for alias: ${alias}`, tenantInfo);
+    console.log(`Using tenant info for alias: ${tenantId}`, tenantInfo);
   } else {
     console.log('Using default tenant info for main domain');
   }

@@ -156,7 +156,7 @@ const Signin = () => {
         email: formData.email,
         password: formData.password,
         role: "ADMIN",
-        tenant_id: tenantId,
+        tenant_id: tenant_id,
       };
 
       const userResponse = await fetch(`${chatServiceHost}/api/v1/tenants/${tenant_id}/users/register`, {
@@ -165,6 +165,7 @@ const Signin = () => {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify(userData),
       });
 
@@ -180,7 +181,7 @@ const Signin = () => {
         isClosable: true,
       });
 
-      router.push('/');
+      //router.push('/');
     } catch (error) {
       console.error("Error creating user:", error);
       console.log(`${tenantServiceHost}/api/v1/tenants/${tenantId}`)

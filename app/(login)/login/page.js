@@ -22,7 +22,6 @@ import { FcGoogle } from 'react-icons/fc'
 import { Providers } from '@/app/components/providers'
 import { chatServiceHost, tenantServiceHost, domain } from '@/app/config';
 
-
 export default function LoginPage() {
   const [alias, setAlias] = useState('')
   const [email, setEmail] = useState('')
@@ -119,7 +118,11 @@ export default function LoginPage() {
         })
 
         //redirect to tenant subdomain
-        window.location.href = `http://${alias}.${domain}:3000/admin`;
+        //window.location.href = `http://${alias}.${domain}:3000/admin`;
+
+        // redirect to domain
+        window.location.href = "/";
+        
       } else {
         const data = await response.json()
         setError(data.message || '登入失敗')
