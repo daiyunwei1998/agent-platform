@@ -181,7 +181,7 @@ const Signin = () => {
         isClosable: true,
       });
 
-      //router.push('/');
+      router.push('/admin/bot-management');
     } catch (error) {
       console.error("Error creating user:", error);
       console.log(`${tenantServiceHost}/api/v1/tenants/${tenantId}`)
