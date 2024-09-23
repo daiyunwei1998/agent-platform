@@ -182,6 +182,7 @@ const Signin = () => {
       });
 
       router.push('/admin/bot-management');
+      router.refresh();
     } catch (error) {
       console.error("Error creating user:", error);
       console.log(`${tenantServiceHost}/api/v1/tenants/${tenantId}`)
