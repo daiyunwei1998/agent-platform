@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Button,
@@ -22,11 +22,10 @@ import {
   useColorModeValue,
 } from "@chakra-ui/react";
 import { useDropzone } from "react-dropzone";
-import {
-  MdCloudUpload,
-  MdOutlineFilePresent,
-} from "react-icons/md";
-import { tenantServiceHost, aiServiceHost } from "@/app/config";
+import { MdCloudUpload, MdOutlineFilePresent } from "react-icons/md";
+import SockJS from "sockjs-client";
+import { Client } from "@stomp/stompjs";
+import { tenantServiceHost, aiServiceHost, chatServiceHost } from "@/app/config";
 
 // Sidebar Content for Navigation
 const SidebarContent = ({ onClose }) => {
@@ -45,18 +44,20 @@ const SidebarContent = ({ onClose }) => {
   );
 };
 
-const Dashboard = ({tenantId}) => {
+const Dashboard = ({ tenantId }) => {
   const [files, setFiles] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [query, setQuery] = useState("");
   const [retrievalResult, setRetrievalResult] = useState("");
   const [activeSection, setActiveSection] = useState("dashboard");
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoadingQuery, setIsLoadingQuery] = useState(false); // Loading state for query
+  const [isLoadingQuery, setIsLoadingQuery] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState([]); // State to keep track of pending tasks
   const { isOpen, onOpen, onClose } = useDisclosure();
   const bgColor = useColorModeValue("gray.50", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const toast = useToast();
+  const clientRef = useRef(null); // Ref for WebSocket client
 
   // File Drop Zone
   const onDrop = (acceptedFiles) => {
@@ -82,14 +83,89 @@ const Dashboard = ({tenantId}) => {
     },
   });
 
+  // WebSocket connection and message handling
+  const connect = () => {
+    if (clientRef.current && clientRef.current.connected) {
+      console.log("WebSocket client is already connected.");
+      return;
+    }
+
+    console.log(`Connecting WebSocket for Tenant ID: ${tenantId}`);
+
+    const socketUrl = chatServiceHost + `/ws`;
+    const socket = new SockJS(socketUrl);
+    const client = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        client.subscribe(
+          `/topic/${tenantId}.task_complete`,
+          onMessageReceived,
+          {
+            ack: "client-individual",
+          }
+        );
+        console.log("Connected to WebSocket channel.");
+      },
+      onStompError: (frame) => {
+        console.error("Broker reported error: " + frame.headers["message"]);
+        console.error("Additional details: " + frame.body);
+      },
+      debug: (str) => {
+        console.log(str);
+      },
+    });
+
+    client.activate();
+    clientRef.current = client;
+  };
+
+  const disconnect = () => {
+    if (clientRef.current) {
+      clientRef.current.deactivate();
+      clientRef.current = null;
+      console.log("Disconnected from WebSocket.");
+    }
+  };
+
+  const onMessageReceived = (payload) => {
+    const message = JSON.parse(payload.body);
+    console.log("Received task complete message:", message);
+
+    const filename = message.filename;
+
+    setPendingTasks((prevTasks) => {
+      const newTasks = prevTasks.filter((name) => name !== filename);
+
+      // If no more pending tasks, disconnect the WebSocket
+      if (newTasks.length === 0) {
+        disconnect();
+      }
+
+      return newTasks;
+    });
+
+    // Show toast notification with filename
+    toast({
+      title: "Task Complete",
+      description: `The task with filename ${filename} has been completed.`,
+      status: "success",
+      duration: 5000,
+      isClosable: true,
+    });
+  };
+
   // Handle File Upload
   const handleUploadFile = async () => {
     setIsUploading(true);
 
+    const filesToUpload = files; // Capture the current files
+    setFiles([]);
+
     const formData = new FormData();
     formData.append("tenant_id", tenantId);
 
-    files.forEach((file) => {
+    filesToUpload.forEach((file) => {
       formData.append("file", file);
     });
 
@@ -111,7 +187,18 @@ const Dashboard = ({tenantId}) => {
           duration: 5000,
           isClosable: true,
         });
-        setFiles([]);
+
+        // Add filenames to pendingTasks
+        setPendingTasks((prevTasks) => {
+          const newTasks = [...prevTasks, ...filesToUpload.map((file) => file.name)];
+
+          // If this is the first task, start the WebSocket connection
+          if (prevTasks.length === 0) {
+            connect();
+          }
+
+          return newTasks;
+        });
       } else {
         const error = await response.json();
         toast({
@@ -137,14 +224,13 @@ const Dashboard = ({tenantId}) => {
 
   // Fetch Documents (Simulated)
   const fetchDocuments = async () => {
-    // Simulating API call
     const data = ["Document 1", "Document 2", "Document 3"];
     setDocuments(data);
   };
 
   // Handle Test Query (AI Retrieval)
   const handleTestQuery = async () => {
-    setIsLoadingQuery(true); // Start loading
+    setIsLoadingQuery(true);
 
     try {
       const response = await fetch(`${aiServiceHost}/api/v1/rag`, {
@@ -163,16 +249,21 @@ const Dashboard = ({tenantId}) => {
       }
 
       const data = await response.json();
-
- 
-      setRetrievalResult(data.data); 
+      setRetrievalResult(data.data);
     } catch (error) {
       console.error("Error:", error);
       setRetrievalResult("Error fetching data. Please try again.");
     } finally {
-      setIsLoadingQuery(false); 
+      setIsLoadingQuery(false);
     }
   };
+
+  // Cleanup WebSocket on component unmount
+  useEffect(() => {
+    return () => {
+      disconnect();
+    };
+  }, []);
 
   // Fetch documents on component mount
   useEffect(() => {
@@ -182,7 +273,6 @@ const Dashboard = ({tenantId}) => {
   return (
     <Box minH="100vh" bg={bgColor}>
       <Flex>
-        {/* Sidebar */}
         <Box
           display={{ base: "none", md: "block" }}
           w="250px"
@@ -194,7 +284,6 @@ const Dashboard = ({tenantId}) => {
           <SidebarContent />
         </Box>
 
-        {/* Drawer for mobile view */}
         <Drawer isOpen={isOpen} placement="left" onClose={onClose}>
           <DrawerOverlay>
             <DrawerContent>
@@ -207,11 +296,9 @@ const Dashboard = ({tenantId}) => {
           </DrawerOverlay>
         </Drawer>
 
-        {/* Main Content */}
         <Box flex={1} p={8} maxW="800px" mx="auto">
           {activeSection === "dashboard" && (
             <VStack spacing={8} align="stretch">
-              {/* Upload Section */}
               <Box>
                 <Heading size="lg" mb={4}>
                   Update Knowledge Base
@@ -251,7 +338,6 @@ const Dashboard = ({tenantId}) => {
                           borderRadius="md"
                           display="flex"
                           alignItems="center"
-                          justifyContent="space-between"
                           bg="white"
                         >
                           <Icon
@@ -278,7 +364,6 @@ const Dashboard = ({tenantId}) => {
                 </Button>
               </Box>
 
-              {/* Documents Section */}
               <Box>
                 <Heading size="lg" mb={4}>
                   Knowledge Base
@@ -298,7 +383,6 @@ const Dashboard = ({tenantId}) => {
                 </VStack>
               </Box>
 
-              {/* Query Section */}
               <Box>
                 <Heading size="lg" mb={4}>
                   Test Query
@@ -312,8 +396,8 @@ const Dashboard = ({tenantId}) => {
                   <Button
                     colorScheme="blue"
                     onClick={handleTestQuery}
-                    isLoading={isLoadingQuery} // Show loading indicator while fetching data
-                    isDisabled={isLoadingQuery || query === ""} // Disable button if already loading or query is empty
+                    isLoading={isLoadingQuery}
+                    isDisabled={isLoadingQuery || query === ""}
                   >
                     Run Query
                   </Button>
