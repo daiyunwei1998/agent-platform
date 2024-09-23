@@ -50,7 +50,7 @@ function processTenantData(data) {
   if (!data) return DEFAULT_TENANT_INFO;
 
   return {
-    logo: data.logo || DEFAULT_TENANT_INFO.logo,
+    logo: data.logo ? `${imageHost}/${data.logo}` : DEFAULT_TENANT_INFO.logo,
     name: data.name ? data.name : DEFAULT_TENANT_INFO.name,
   };
 }
@@ -84,7 +84,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href={tenantInfo.logo?`${imageHost}/${tenantInfo.logo}`:'/agent.png'} />
+        <link rel="icon" href={tenantInfo.logo} />
         <title>{`${tenantInfo.name} | 閃應雲客服平台`}</title>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>

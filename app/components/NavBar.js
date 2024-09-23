@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { setCookie, getCookie, deleteCookie } from 'cookies-next';
 import { useCookies } from 'react-cookie';
-import { chatServiceHost, imageHost } from '@/app/config';
+import { chatServiceHost } from '@/app/config';
 
 
 const Navbar = ({ name, logo, initialLoggedIn}) => {
@@ -73,7 +73,7 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
         {/* Admin Dashboard title with icon */}
         <Link href="/">
           <Flex align="center">
-            <Image src={logo? `${imageHost}/${logo}`:"/user.png"} alt="User" boxSize="40px"/>
+            <Image src={logo} alt="User" boxSize="40px"/>
             <Box fontSize="2xl" fontWeight="bold" ml={4}>
               {name}
             </Box>
