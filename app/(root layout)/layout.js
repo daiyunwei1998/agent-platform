@@ -3,7 +3,7 @@ import './globals.css';
 import NavBar from '@/app/components/NavBar';
 import { Providers } from '@/app/components/providers';
 import { headers, cookies } from 'next/headers';
-import { host, tenantServiceHost } from '@/app/config';
+import { host, tenantServiceHost, imageHost} from '@/app/config';
 import NavbarWrapper from '../components/CookieProvider';
 
 
@@ -84,7 +84,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href={tenantInfo.logo} />
+        <link rel="icon" href={tenantInfo.logo?`${imageHost}/${tenantInfo.logo}`:'/agent.png'} />
         <title>{`${tenantInfo.name} | 閃應雲客服平台`}</title>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
