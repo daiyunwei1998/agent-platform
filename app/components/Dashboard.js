@@ -20,6 +20,18 @@ import {
   useToast,
   Stack,
   useColorModeValue,
+  Accordion,
+  AccordionItem,
+  AccordionButton,
+  AccordionPanel,
+  AccordionIcon,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
 } from "@chakra-ui/react";
 import { useDropzone } from "react-dropzone";
 import { MdCloudUpload, MdOutlineFilePresent } from "react-icons/md";
@@ -52,12 +64,22 @@ const Dashboard = ({ tenantId }) => {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingQuery, setIsLoadingQuery] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState([]); // State to keep track of pending tasks
+  const [pendingTasks, setPendingTasks] = useState([]);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const bgColor = useColorModeValue("gray.50", "gray.800");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const toast = useToast();
-  const clientRef = useRef(null); // Ref for WebSocket client
+  const clientRef = useRef(null);
+
+  // New state variables for Knowledge Base functionality
+  const [docNames, setDocNames] = useState([]);
+  const [selectedDoc, setSelectedDoc] = useState(null);
+  const [docEntries, setDocEntries] = useState([]);
+  const [isLoadingDocNames, setIsLoadingDocNames] = useState(false);
+  const [isLoadingDocEntries, setIsLoadingDocEntries] = useState(false);
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editedContent, setEditedContent] = useState("");
+  const { isOpen: isEditModalOpen, onOpen: onEditModalOpen, onClose: onEditModalClose } = useDisclosure();
 
   // File Drop Zone
   const onDrop = (acceptedFiles) => {
@@ -137,7 +159,6 @@ const Dashboard = ({ tenantId }) => {
     setPendingTasks((prevTasks) => {
       const newTasks = prevTasks.filter((name) => name !== filename);
 
-      // If no more pending tasks, disconnect the WebSocket
       if (newTasks.length === 0) {
         disconnect();
       }
@@ -145,7 +166,6 @@ const Dashboard = ({ tenantId }) => {
       return newTasks;
     });
 
-    // Show toast notification with filename
     toast({
       title: "Task Complete",
       description: `The task with filename ${filename} has been completed.`,
@@ -159,7 +179,7 @@ const Dashboard = ({ tenantId }) => {
   const handleUploadFile = async () => {
     setIsUploading(true);
 
-    const filesToUpload = files; // Capture the current files
+    const filesToUpload = files;
     setFiles([]);
 
     const formData = new FormData();
@@ -188,11 +208,9 @@ const Dashboard = ({ tenantId }) => {
           isClosable: true,
         });
 
-        // Add filenames to pendingTasks
         setPendingTasks((prevTasks) => {
           const newTasks = [...prevTasks, ...filesToUpload.map((file) => file.name)];
 
-          // If this is the first task, start the WebSocket connection
           if (prevTasks.length === 0) {
             connect();
           }
@@ -258,6 +276,89 @@ const Dashboard = ({ tenantId }) => {
     }
   };
 
+  // Fetch document names
+  const fetchDocNames = async () => {
+    setIsLoadingDocNames(true);
+    try {
+      const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/doc-names`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch document names");
+      }
+      const data = await response.json();
+      setDocNames(data.docNames);
+    } catch (error) {
+      console.error("Error fetching document names:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch document names",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingDocNames(false);
+    }
+  };
+
+  // Fetch entries for a selected document
+  const fetchDocEntries = async (docName) => {
+    setIsLoadingDocEntries(true);
+    try {
+      const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries?docName=${encodeURIComponent(docName)}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch document entries");
+      }
+      const data = await response.json();
+      setDocEntries(data.entries);
+    } catch (error) {
+      console.error("Error fetching document entries:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch document entries",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingDocEntries(false);
+    }
+  };
+
+  // Update entry content
+  const updateEntryContent = async () => {
+    try {
+      const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries/${editingEntry.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ newContent: editedContent }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update entry content");
+      }
+      toast({
+        title: "Success",
+        description: "Entry content updated successfully",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+      await fetchDocEntries(selectedDoc);
+    } catch (error) {
+      console.error("Error updating entry content:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update entry content",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      onEditModalClose();
+    }
+  };
+
   // Cleanup WebSocket on component unmount
   useEffect(() => {
     return () => {
@@ -268,6 +369,7 @@ const Dashboard = ({ tenantId }) => {
   // Fetch documents on component mount
   useEffect(() => {
     fetchDocuments();
+    fetchDocNames();
   }, []);
 
   return (
@@ -368,19 +470,60 @@ const Dashboard = ({ tenantId }) => {
                 <Heading size="lg" mb={4}>
                   Knowledge Base
                 </Heading>
-                <VStack align="stretch" spacing={2}>
-                  {documents.map((doc, index) => (
-                    <Box
-                      key={index}
-                      p={3}
-                      bg="white"
-                      borderRadius="md"
-                      boxShadow="sm"
-                    >
-                      <Text>{doc}</Text>
-                    </Box>
-                  ))}
-                </VStack>
+                {isLoadingDocNames ? (
+                  <Text>Loading document names...</Text>
+                ) : (
+                  <Accordion allowToggle>
+                     {docNames.map((docName, index) => (
+                      <AccordionItem key={index}>
+                        <h2>
+                          <AccordionButton
+                            onClick={() => {
+                              setSelectedDoc(docName);
+                              fetchDocEntries(docName);
+                            }}
+                          >
+                            <Box flex="1" textAlign="left">
+                              {docName}
+                            </Box>
+                            <AccordionIcon />
+                          </AccordionButton>
+                        </h2>
+                        <AccordionPanel pb={4}>
+                          {isLoadingDocEntries && selectedDoc === docName ? (
+                            <Text>Loading entries...</Text>
+                          ) : (
+                            <VStack align="stretch" spacing={2}>
+                              {docEntries.map((entry, entryIndex) => (
+                                <Box
+                                  key={entryIndex}
+                                  p={3}
+                                  bg="white"
+                                  borderRadius="md"
+                                  boxShadow="sm"
+                                >
+                                  <Text>{entry.content}</Text>
+                                  <Button
+                                    size="sm"
+                                    colorScheme="blue"
+                                    mt={2}
+                                    onClick={() => {
+                                      setEditingEntry(entry);
+                                      setEditedContent(entry.content);
+                                      onEditModalOpen();
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                </Box>
+                              ))}
+                            </VStack>
+                          )}
+                        </AccordionPanel>
+                      </AccordionItem>
+                    ))}
+                  </Accordion>
+                )}
               </Box>
 
               <Box>
@@ -413,6 +556,28 @@ const Dashboard = ({ tenantId }) => {
           )}
         </Box>
       </Flex>
+
+      {/* Edit Entry Modal */}
+      <Modal isOpen={isEditModalOpen} onClose={onEditModalClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit Entry</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Textarea
+              value={editedContent}
+              onChange={(e) => setEditedContent(e.target.value)}
+              rows={10}
+            />
+          </ModalBody>
+          <ModalFooter>
+            <Button colorScheme="blue" mr={3} onClick={updateEntryContent}>
+              Save
+            </Button>
+            <Button variant="ghost" onClick={onEditModalClose}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };
