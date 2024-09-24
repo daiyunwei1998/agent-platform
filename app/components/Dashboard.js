@@ -285,7 +285,8 @@ const Dashboard = ({ tenantId }) => {
         throw new Error("Failed to fetch document names");
       }
       const data = await response.json();
-      setDocNames(data.docNames);
+      const uniqueDocNames = [...new Set(data.docNames)];
+      setDocNames(uniqueDocNames);
     } catch (error) {
       console.error("Error fetching document names:", error);
       toast({
