@@ -10,14 +10,28 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18'
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+          key: ${{ runner.OS }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.OS }}-node-
+
       - name: Install dependencies
         run: npm ci
+
       - name: Build Next.js app
         run: npm run build
+
       - name: Create PM2 ecosystem file
         run: |
           cat << EOF > ecosystem.config.js
@@ -33,6 +47,7 @@ jobs:
             }]
           }
           EOF
+
       - name: Deploy to EC2
         env:
           PRIVATE_KEY: ${{ secrets.SSH_KEY }}
@@ -55,7 +70,6 @@ jobs:
             # Add npm global bin to PATH
             export PATH="$HOME/.npm-global/bin:$PATH"
             cd ~/agent-platform
-            # Install production dependencies
             npm ci --only=production
             pm2 delete agent-chat || true
             pm2 start ecosystem.config.js
