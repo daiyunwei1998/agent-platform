@@ -1,4 +1,4 @@
-name: Deploy Agent Chat to EC2
+name: Deploy Agent Platform to EC2
 on:
   push:
     branches:
@@ -39,7 +39,7 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
-          scp -o StrictHostKeyChecking=no -i private_key.pem -r .next package.json package-lock.json ecosystem.config.js matcha@${{ secrets.SSH_HOST }}:~/agent_chat
+          scp -o StrictHostKeyChecking=no -i private_key.pem -r .next package.json package-lock.json ecosystem.config.js matcha@${{ secrets.SSH_HOST }}:~/agent-platform
           ssh -o StrictHostKeyChecking=no -i private_key.pem matcha@${{ secrets.SSH_HOST }} << 'EOF'
             set -x
             # Load NVM
@@ -54,7 +54,8 @@ jobs:
             npm install -g pm2
             # Add npm global bin to PATH
             export PATH="$HOME/.npm-global/bin:$PATH"
-            cd ~/agent_chat
+            cd ~/agent-platform
+            # Install production dependencies
             npm ci --only=production
             pm2 delete agent-chat || true
             pm2 start ecosystem.config.js
