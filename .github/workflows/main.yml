@@ -39,8 +39,7 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
-          scp -o StrictHostKeyChecking=no -i private_key.pem -r .next ecosystem.config.js matcha@${{ secrets.SSH_HOST }}:~/agent-platform
-          scp -o StrictHostKeyChecking=no -i private_key.pem package.json package-lock.json matcha@${{ secrets.SSH_HOST }}:~/agent-platform/tmp
+          scp -o StrictHostKeyChecking=no -i private_key.pem -r .next package.json package-lock.json ecosystem.config.js matcha@${{ secrets.SSH_HOST }}:~/agent-platform
           ssh -o StrictHostKeyChecking=no -i private_key.pem matcha@${{ secrets.SSH_HOST }} << 'EOF'
             set -x
             # Load NVM
@@ -56,13 +55,8 @@ jobs:
             # Add npm global bin to PATH
             export PATH="$HOME/.npm-global/bin:$PATH"
             cd ~/agent-platform
-            # Compare package.json files and update if necessary
-            if [ -f tmp/package.json ] && ! cmp -s package.json tmp/package.json; then
-              mv tmp/package.json .
-              mv tmp/package-lock.json .
-              npm ci --only=production
-            fi
-            rm -rf tmp
+            # Install production dependencies
+            npm ci --only=production
             pm2 delete agent-chat || true
             pm2 start ecosystem.config.js
             pm2 save
