@@ -15,7 +15,7 @@ import {
   Avatar
 } from "@chatscope/chat-ui-kit-react";
 import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
-import { chatServiceHost } from '@/app/config';
+import { chatServiceHost, tenantServiceHost, imageHost} from '@/app/config';
 
 const AgentChat = ({ tenantId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
@@ -29,12 +29,34 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
   useEffect(() => {
     connect();
+    fetchLogo();
     return () => {
       if (clientRef.current) {
         clientRef.current.deactivate();
       }
     };
   }, []);
+
+  const fetchLogo = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.append('tenant_id', tenantId);
+  
+      const response = await fetch(`${tenantServiceHost}/api/v1/tenants/find?${params.toString()}`, {});
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.logo) {
+          setLogoUrl(`${imageHost}/${data.logo}`);
+        }
+      } else {
+        console.error("Failed to fetch logo:", response.statusText);
+      }
+    } catch (error) {
+      console.error(`Error fetching tenant data for alias: ${tenantId}`, error);
+    }
+  };
+
 
   const connect = () => {
     console.log(`Connect with credential: Tenant ID: ${tenantId}, User ID: ${userId}, Username: ${userName}`);
@@ -59,6 +81,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
             type: "JOIN",
             tenant_id: tenantId,
             user_type: "agent",
+            timestamp: new Date().toISOString(),
           }),
         });
 
@@ -85,14 +108,14 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       setAssignedCustomers((prevCustomers) => [...prevCustomers, message.sender]);
     }
 
-    setMessages((prevMessages) => [...prevMessages, message]);
+    setMessages((prevMessages) => [...prevMessages, { ...message, timestamp: new Date().toISOString() }]);
   };
 
   const onMessageReceived = (payload) => {
     const message = JSON.parse(payload.body);
     console.log("Received chat message:", message);
 
-    setMessages((prevMessages) => [...prevMessages, message]);
+    setMessages((prevMessages) => [...prevMessages, { ...message, timestamp: new Date().toISOString() }]);
   };
 
   const onCustomerWaitingReceived = (payload) => {
@@ -129,6 +152,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         tenant_id: tenantId,
         receiver: selectedCustomer,
         user_type: "agent",
+        timestamp: new Date().toISOString(),
       };
 
       setMessages((prevMessages) => [...prevMessages, chatMessage]);
@@ -149,10 +173,15 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       const response = await axios.get(
         `http://localhost:8080/api/chats/${tenantId}/${customerId}`
       );
-      setMessages(response.data);
+      setMessages(response.data.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp).toISOString() })));
     } catch (error) {
       console.error("Error loading offline messages:", error);
     }
+  };
+
+  const formatTimestamp = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -191,12 +220,15 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                   key={idx}
                   model={{
                     message: msg.content,
-                    sentTime: "just now",
+                    sentTime: formatTimestamp(msg.timestamp),
                     sender: msg.sender === userId ? userName : msg.sender,
                     direction: msg.sender === userId ? "outgoing" : "incoming",
                     position: "normal",
                   }}>
-                  <Message.Header sender={msg.sender === userId ? userName : msg.sender} />
+                  <Message.Header sender={msg.sender === userId ? userName : msg.sender} sentTime={formatTimestamp(msg.timestamp)} />
+                  <Message.Footer>
+                    <small>{new Date(msg.timestamp).toLocaleTimeString()}</small>
+                  </Message.Footer>
                   <Avatar
                     src={msg.sender === userId ? "/agent.png" : "/user.png"}
                     name={msg.sender === userId ? userName : msg.sender}
