@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import ReactMarkdown from 'react-markdown';
 import {
   Box,
   Button,
@@ -38,6 +39,7 @@ import { MdCloudUpload, MdOutlineFilePresent } from "react-icons/md";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import { tenantServiceHost, aiServiceHost, chatServiceHost } from "@/app/config";
+import styles from './Dashboard.module.css'
 
 // Sidebar Content for Navigation
 const SidebarContent = ({ onClose }) => {
@@ -545,14 +547,24 @@ const Dashboard = ({ tenantId }) => {
                   >
                     Run Query
                   </Button>
-                  <Textarea
-                    value={retrievalResult}
-                    readOnly
-                    placeholder="Retrieval results will appear here"
+                  <Box
+                    border="1px solid"
+                    borderColor="gray.200"
+                    borderRadius="md"
+                    p={4}
                     minHeight="150px"
-                  />
+                    overflowY="auto"
+                    bg="white"
+                  >
+                    {retrievalResult ? (
+                      <ReactMarkdown className={styles['markdown-content']}>{retrievalResult}</ReactMarkdown>
+                    ) : (
+                      <Box color="gray.500">Retrieval results will appear here</Box>
+                    )}
+                  </Box>
                 </VStack>
               </Box>
+
             </VStack>
           )}
         </Box>
