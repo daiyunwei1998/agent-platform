@@ -323,7 +323,7 @@ const Dashboard = ({ tenantId }) => {
   // Update entry content
   const updateEntryContent = async () => {
     try {
-      console.log(`editing ${editingEntry.id}`)
+      console.log(`edited ${editingEntry.id}`)
       const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries/${editingEntry.id}`, {
         method: 'PUT',
         headers: {
@@ -504,6 +504,7 @@ const Dashboard = ({ tenantId }) => {
                                     colorScheme="blue"
                                     mt={2}
                                     onClick={() => {
+                                      console.log(`editing ${entry.id}`)
                                       setEditingEntry(entry);
                                       setEditedContent(entry.content);
                                       onEditModalOpen();
