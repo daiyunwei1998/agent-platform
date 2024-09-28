@@ -20,7 +20,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FcGoogle } from 'react-icons/fc'
 import { Providers } from '@/app/components/providers'
-import { chatServiceHost, tenantServiceHost, domain } from '@/app/config'
+import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config'
 
 export default function LoginPage() {
   const [alias, setAlias] = useState('')
@@ -194,7 +194,7 @@ export default function LoginPage() {
               justify={'center'}
             >
               <Stack spacing={6} w={'full'} maxW={'lg'}>
-                <Box as="img" src="/agent.png" alt="閃應雲" w={40} />
+                <Box as="img" src={`${imageHost}/tenant_logos/agent.png`} alt="閃應雲" w={40} />
                 <Heading fontSize={{ base: '3xl', md: '4xl', lg: '5xl' }}>
                   屬於你的 AI 客服機器人
                 </Heading>

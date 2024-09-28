@@ -22,7 +22,7 @@ import {
 import { FcGoogle } from 'react-icons/fc';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { Providers } from '@/app/components/providers';
-import { chatServiceHost, tenantServiceHost } from '@/app/config';
+import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config';
 import { useRouter } from 'next/navigation';
 
 const Signin = () => {
@@ -218,7 +218,7 @@ const Signin = () => {
         <VStack spacing={6} align="stretch">
           <Progress value={step === 1 ? 50 : 100} size="sm" colorScheme="blue" />
           <Box textAlign="center">
-            <Image src="/agent.png" alt="Logo" boxSize="50px" mx="auto" mb={4} />
+            <Image src={`${imageHost}/tenant_logos/agent.png`} alt="Logo" boxSize="50px" mx="auto" mb={4} />
             <Heading size="xl" mb={2}>註冊賬戶</Heading>
             <Text fontSize="md" color="gray.600">
               {step === 1 ? "第一步: 註冊商戶資料" : "第二步: 新建管理員賬戶"}

@@ -201,7 +201,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                   acknowledgeMessage(customerId);
                 }}
               >
-                <Avatar src="/user.png" name={customerId} status={waitingCustomers.includes(customerId) ? "available" : "dnd"} />
+                <Avatar src={`${imageHost}/tenant_logos/user.png`} name={customerId} status={waitingCustomers.includes(customerId) ? "available" : "dnd"} />
               </Conversation>
             ))}
           </ConversationList>
@@ -230,7 +230,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                     <small>{new Date(msg.timestamp).toLocaleTimeString()}</small>
                   </Message.Footer>
                   <Avatar
-                    src={msg.sender === userId ? "/agent.png" : "/user.png"}
+                    src={msg.sender === userId ? `${imageHost}/tenant_logos/agent.png` : `${imageHost}/tenant_logos/user.png`}
                     name={msg.sender === userId ? userName : msg.sender}
                   />
                 </Message>

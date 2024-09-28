@@ -1,9 +1,9 @@
 import { headers } from 'next/headers';
-import { host, tenantServiceHost } from '@/app/config';
+import { host, tenantServiceHost, imageHost } from '@/app/config';
 import { getCookie } from 'cookies-next';
 
 const DEFAULT_TENANT_INFO = {
-  logo: '/agent.png',
+  logo: `{imageHost}/tenant_logos/agent.png`,
   name: '閃應雲客服平台',
 };
 
