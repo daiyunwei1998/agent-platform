@@ -305,6 +305,7 @@ const Dashboard = ({ tenantId }) => {
         throw new Error("Failed to fetch document entries");
       }
       const data = await response.json();
+      console.log("doc entries:", data.entries)
       setDocEntries(data.entries);
     } catch (error) {
       console.error("Error fetching document entries:", error);
