@@ -323,6 +323,7 @@ const Dashboard = ({ tenantId }) => {
   // Update entry content
   const updateEntryContent = async () => {
     try {
+      console.log(`editing ${editingEntry.id}`)
       const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries/${editingEntry.id}`, {
         method: 'PUT',
         headers: {
