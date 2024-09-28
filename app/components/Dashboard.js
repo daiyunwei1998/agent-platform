@@ -282,13 +282,12 @@ const Dashboard = ({ tenantId }) => {
   const fetchDocNames = async () => {
     setIsLoadingDocNames(true);
     try {
-      const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/doc-names`);
+      const response = await fetch(`${tenantServiceHost}/api/v1/tenant_docs/${tenantId}/`);
       if (!response.ok) {
         throw new Error("Failed to fetch document names");
       }
       const data = await response.json();
-      const uniqueDocNames = [...new Set(data.docNames)];
-      setDocNames(uniqueDocNames);
+      setDocNames(data.docNames);
     } catch (error) {
       console.error("Error fetching document names:", error);
       toast({
