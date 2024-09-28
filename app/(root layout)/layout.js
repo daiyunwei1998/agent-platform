@@ -20,7 +20,7 @@ const geistMono = localFont({
 });
 
 const DEFAULT_TENANT_INFO = {
-  logo: `{imageHost}/tenant_logos/agent.png`,
+  logo: `${imageHost}/tenant_logos/agent.png`,
   name: '閃應雲客服平台',
 };
 
