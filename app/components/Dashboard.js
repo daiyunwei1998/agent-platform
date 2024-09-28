@@ -60,7 +60,6 @@ const SidebarContent = ({ onClose }) => {
 
 const Dashboard = ({ tenantId }) => {
   const [files, setFiles] = useState([]);
-  const [documents, setDocuments] = useState([]);
   const [query, setQuery] = useState("");
   const [retrievalResult, setRetrievalResult] = useState("");
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -242,12 +241,6 @@ const Dashboard = ({ tenantId }) => {
     }
   };
 
-  // Fetch Documents (Simulated)
-  const fetchDocuments = async () => {
-    const data = ["Document 1", "Document 2", "Document 3"];
-    setDocuments(data);
-  };
-
   // Handle Test Query (AI Retrieval)
   const handleTestQuery = async () => {
     setIsLoadingQuery(true);
@@ -287,7 +280,8 @@ const Dashboard = ({ tenantId }) => {
         throw new Error("Failed to fetch document names");
       }
       const data = await response.json();
-      setDocNames(data.docNames);
+      const docNames = data.map(item => item.doc_name);
+      setDocNames(docNames);
     } catch (error) {
       console.error("Error fetching document names:", error);
       toast({
@@ -370,7 +364,6 @@ const Dashboard = ({ tenantId }) => {
 
   // Fetch documents on component mount
   useEffect(() => {
-    fetchDocuments();
     fetchDocNames();
   }, []);
 
