@@ -300,7 +300,8 @@ const Dashboard = ({ tenantId }) => {
   const fetchDocEntries = async (docName) => {
     setIsLoadingDocEntries(true);
     try {
-      const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries?docName=${encodeURIComponent(docName)}`);
+      const response = await fetch(`${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries?docName=${encodeURIComponent(docName)}`, 
+    {cache: 'no-store'});
       if (!response.ok) {
         throw new Error("Failed to fetch document entries");
       }
