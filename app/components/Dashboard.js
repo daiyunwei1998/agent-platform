@@ -153,7 +153,7 @@ const Dashboard = ({ tenantId }) => {
 
   const onMessageReceived = (payload) => {
     const message = JSON.parse(payload.body);
-    console.log("Received task complete message:", message);
+    console.log("Received worker message:", message);
 
     const filename = message.filename;
 
@@ -166,14 +166,25 @@ const Dashboard = ({ tenantId }) => {
 
       return newTasks;
     });
-
-    toast({
-      title: "Task Complete",
-      description: `The task with filename ${filename} has been completed.`,
-      status: "success",
-      duration: 5000,
-      isClosable: true,
-    });
+    if (message.status == "success") {
+      toast({
+        title: "Task Complete",
+        description: `The task with filename ${filename} has been completed.`,
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+    } else {
+      console.log(message.error);
+      toast({
+        title: "Task Failed",
+        description: message.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+    
   };
 
   // Handle File Upload
