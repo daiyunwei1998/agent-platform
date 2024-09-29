@@ -77,7 +77,7 @@ const UpdateKnowledgeBase = ({
         const result = await response.json();
         toast({
           title: "Upload successful.",
-          description: `File uploaded successfully. Task ID: ${result.task_id}`,
+          description: `File uploaded successfully. `,
           status: "success",
           duration: 5000,
           isClosable: true,
