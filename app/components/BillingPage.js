@@ -4,7 +4,6 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 import axios from 'axios';
 import {tenantServiceHost} from '@/app/config'
 import { format, parseISO } from 'date-fns';
-import { utcToZonedTime } from 'date-fns-tz';
 
 const BillingPage = () => {
   const [usageData, setUsageData] = useState([]);
@@ -28,10 +27,10 @@ const BillingPage = () => {
         }
 
         const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        
+
         const formattedData = response.data.map(item => {
           const date = parseISO(item.date);
-          const zonedDate = utcToZonedTime(date, userTimeZone);
+          const zonedDate = new Date(date.toLocaleString('en-US', { timeZone: userTimeZone }));
           return {
             date: format(zonedDate, 'MMM dd'),
             tokens: item.tokens_used,
