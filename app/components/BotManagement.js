@@ -22,6 +22,7 @@ import { chatServiceHost } from "@/app/config";
 import UpdateKnowledgeBase from "./UpdateKnowledgeBase";
 import ViewKnowledgeBase from "./ViewKnowledgeBase";
 import TestQuery from "./TestQuery";
+import BillingPage from "./BillingPage";
 
 const SidebarContent = ({ setActiveSection, onClose }) => {
   return (
@@ -55,6 +56,16 @@ const SidebarContent = ({ setActiveSection, onClose }) => {
         }}
       >
         Test Query
+      </Button>
+      <Button
+        justifyContent="flex-start"
+        variant="ghost"
+        onClick={() => {
+          setActiveSection("billing");
+          onClose && onClose();
+        }}
+      >
+       Billing
       </Button>
     </VStack>
   );
@@ -202,6 +213,9 @@ const BotManagement = ({ tenantId }) => {
           )}
           {activeSection === "testQuery" && (
             <TestQuery tenantId={tenantId} />
+          )}
+          {activeSection === "billing" && (
+            <BillingPage></BillingPage>
           )}
         </Box>
       </Flex>
