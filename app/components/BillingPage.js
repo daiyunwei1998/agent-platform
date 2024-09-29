@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Box, VStack, HStack, Heading, Text, Button, Table, Thead, Tbody, Tr, Th, Td, Stat, StatLabel, StatNumber, StatHelpText, useColorModeValue, Alert, AlertIcon, Spinner } from '@chakra-ui/react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
-import { format, parseISO, utcToZonedTime } from 'date-fns-tz';
 import {tenantServiceHost} from '@/app/config'
+import { format, parseISO } from 'date-fns';
+import { utcToZonedTime } from 'date-fns-tz';
 
 const BillingPage = () => {
   const [usageData, setUsageData] = useState([]);
@@ -28,11 +29,15 @@ const BillingPage = () => {
 
         const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
         
-        const formattedData = response.data.map(item => ({
-          date: format(utcToZonedTime(parseISO(item.date), userTimeZone), 'MMM dd'),
-          tokens: item.tokens_used,
-          price: item.total_price
-        }));
+        const formattedData = response.data.map(item => {
+          const date = parseISO(item.date);
+          const zonedDate = utcToZonedTime(date, userTimeZone);
+          return {
+            date: format(zonedDate, 'MMM dd'),
+            tokens: item.tokens_used,
+            price: item.total_price
+          };
+        });
 
         console.log('Formatted Data:', formattedData); // Debugging log
 
