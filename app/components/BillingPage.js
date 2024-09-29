@@ -1,22 +1,39 @@
-import React from 'react';
-import { Box, VStack, HStack, Heading, Text, Button, Table, Thead, Tbody, Tr, Th, Td, Stat, StatLabel, StatNumber, StatHelpText, useColorModeValue } from '@chakra-ui/react';
+import React, { useState, useEffect } from 'react';
+import { Box, VStack, HStack, Heading, Text, Button, Table, Thead, Tbody, Tr, Th, Td, Stat, StatLabel, StatNumber, StatHelpText, useColorModeValue } from '@/components/ui/chakra';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import axios from 'axios';
+import { format, parseISO, utcToZonedTime } from 'date-fns-tz';
+import {tenantServiceHost} from '@/app/config';
 
-// Generate mock data for daily usage in the current month
-const generateDailyUsage = () => {
-  const today = new Date();
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-  return Array.from({ length: daysInMonth }, (_, i) => ({
-    day: i + 1,
-    tokens: Math.floor(Math.random() * 2000) + 500, // Random number between 500 and 2500
-  }));
-};
-
-const dailyUsageData = generateDailyUsage();
-
-const BillingPage = () => {
+const BillingPage = ({tenantId}) => {
+  const [usageData, setUsageData] = useState([]);
+  const [totalUsage, setTotalUsage] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0);
   const bgColor = useColorModeValue('gray.50', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await axios.get(`${tenantServiceHost}/api/v1/usage/monthly/daily/?tenant_id=${tenantId}&year=2024&month=9`);
+        const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        
+        const formattedData = response.data.map(item => ({
+          date: format(utcToZonedTime(parseISO(item.date), userTimeZone), 'MMM dd'),
+          tokens: item.tokens_used,
+          price: item.total_price
+        }));
+
+        setUsageData(formattedData);
+        setTotalUsage(formattedData.reduce((sum, item) => sum + item.tokens, 0));
+        setTotalPrice(formattedData.reduce((sum, item) => sum + item.price, 0));
+      } catch (error) {
+        console.error('Error fetching usage data:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <Box maxWidth="1200px" margin="auto" padding={8}>
@@ -26,54 +43,56 @@ const BillingPage = () => {
         <HStack spacing={8} align="stretch">
           <Stat flex={1} backgroundColor={bgColor} borderRadius="md" p={4} border="1px" borderColor={borderColor}>
             <StatLabel>Current Usage</StatLabel>
-            <StatNumber>52,500 tokens</StatNumber>
-            <StatHelpText>Jun 1 - Jun 30</StatHelpText>
+            <StatNumber>{totalUsage.toLocaleString()} tokens</StatNumber>
+            <StatHelpText>Sep 1 - Sep 30, 2024</StatHelpText>
           </Stat>
           <Stat flex={1} backgroundColor={bgColor} borderRadius="md" p={4} border="1px" borderColor={borderColor}>
             <StatLabel>Estimated Bill</StatLabel>
-            <StatNumber>$105.00</StatNumber>
-            <StatHelpText>$0.002 per token</StatHelpText>
+            <StatNumber>${totalPrice.toFixed(2)}</StatNumber>
+            <StatHelpText>Based on current usage</StatHelpText>
           </Stat>
         </HStack>
 
         <Box backgroundColor={bgColor} borderRadius="md" p={4} border="1px" borderColor={borderColor}>
           <Heading as="h2" size="md" mb={4}>Daily Usage This Billing Period</Heading>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={dailyUsageData}>
-              <XAxis dataKey="day" />
+            <LineChart data={usageData}>
+              <XAxis dataKey="date" />
               <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="tokens" stroke="#3182CE" />
+              <Tooltip 
+                formatter={(value, name) => [value.toLocaleString(), name === 'tokens' ? 'Tokens' : 'Price']}
+                labelFormatter={(label) => `Date: ${label}`}
+              />
+              <Line type="monotone" dataKey="tokens" stroke="#3182CE" name="Tokens" />
             </LineChart>
           </ResponsiveContainer>
         </Box>
 
         <Box backgroundColor={bgColor} borderRadius="md" p={4} border="1px" borderColor={borderColor}>
-          <Heading as="h2" size="md" mb={4}>Recent Invoices</Heading>
+          <Heading as="h2" size="md" mb={4}>Usage Details</Heading>
           <Table variant="simple">
             <Thead>
               <Tr>
                 <Th>Date</Th>
-                <Th>Amount</Th>
-                <Th>Status</Th>
-                <Th>Action</Th>
+                <Th>Tokens Used</Th>
+                <Th>Price</Th>
               </Tr>
             </Thead>
             <Tbody>
-              <Tr>
-                <Td>May 31, 2023</Td>
-                <Td>$110.00</Td>
-                <Td>Paid</Td>
-                <Td><Button size="sm">Download</Button></Td>
-              </Tr>
-              <Tr>
-                <Td>Apr 30, 2023</Td>
-                <Td>$90.00</Td>
-                <Td>Paid</Td>
-                <Td><Button size="sm">Download</Button></Td>
-              </Tr>
+              {usageData.slice(0, 5).map((item, index) => (
+                <Tr key={index}>
+                  <Td>{item.date}</Td>
+                  <Td>{item.tokens.toLocaleString()}</Td>
+                  <Td>${item.price.toFixed(4)}</Td>
+                </Tr>
+              ))}
             </Tbody>
           </Table>
+          {usageData.length > 5 && (
+            <Text mt={2} color="blue.500" cursor="pointer">
+              View all {usageData.length} days
+            </Text>
+          )}
         </Box>
 
         <HStack justify="space-between">

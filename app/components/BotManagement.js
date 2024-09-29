@@ -215,7 +215,7 @@ const BotManagement = ({ tenantId }) => {
             <TestQuery tenantId={tenantId} />
           )}
           {activeSection === "billing" && (
-            <BillingPage></BillingPage>
+            <BillingPage tenantId={tenantId}></BillingPage>
           )}
         </Box>
       </Flex>
