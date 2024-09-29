@@ -46,21 +46,17 @@ const ViewKnowledgeBase = ({ tenantId }) => {
       const response = await fetch(
         `${tenantServiceHost}/api/v1/tenant_docs/${tenantId}/`
       );
-      if (!response.ok) {
-        if (response.status === 404) {
-            // If 404, set docNames to an empty array
-            setDocNames([]);
-          } else if (response.status === 500) {
-            // If 500, throw an error to be caught in the catch block
-            throw new Error("Server error while fetching document names");
-          } else {
-            // Handle other unexpected statuses
-            throw new Error(`Unexpected error: ${response.statusText}`);
-        }
+      
+     if (response.status === 404) {
+        // If 404, set docNames to an empty array
+        setDocNames([]);
+        } 
+      
+      if(response.ok) {
+        const data = await response.json();
+        const docNames = data.map((item) => item.doc_name);
+        setDocNames(docNames);
       }
-      const data = await response.json();
-      const docNames = data.map((item) => item.doc_name);
-      setDocNames(docNames);
     } catch (error) {
       console.error("Error fetching document names:", error);
       toast({
