@@ -10,7 +10,7 @@ import {
 } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown";
 import { aiServiceHost } from "@/app/config";
-import styles from "./Dashboard.module.css";
+import styles from "./TestQuery.module.css";
 
 const TestQuery = ({ tenantId }) => {
   const [query, setQuery] = useState("");
