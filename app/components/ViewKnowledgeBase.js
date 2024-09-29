@@ -47,7 +47,16 @@ const ViewKnowledgeBase = ({ tenantId }) => {
         `${tenantServiceHost}/api/v1/tenant_docs/${tenantId}/`
       );
       if (!response.ok) {
-        throw new Error("Failed to fetch document names");
+        if (response.status === 404) {
+            // If 404, set docNames to an empty array
+            setDocNames([]);
+          } else if (response.status === 500) {
+            // If 500, throw an error to be caught in the catch block
+            throw new Error("Server error while fetching document names");
+          } else {
+            // Handle other unexpected statuses
+            throw new Error(`Unexpected error: ${response.statusText}`);
+        }
       }
       const data = await response.json();
       const docNames = data.map((item) => item.doc_name);
