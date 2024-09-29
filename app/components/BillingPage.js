@@ -3,6 +3,7 @@ import { Box, VStack, HStack, Heading, Text, Button, Table, Thead, Tbody, Tr, Th
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
 import { format, parseISO, utcToZonedTime } from 'date-fns-tz';
+import {tenantServiceHost} from '@/app/config'
 
 const BillingPage = () => {
   const [usageData, setUsageData] = useState([]);
