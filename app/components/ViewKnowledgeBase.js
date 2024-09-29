@@ -171,7 +171,7 @@ const ViewKnowledgeBase = ({ tenantId }) => {
     setIsDeleting(true); // Start loading
     try {
       const response = await fetch(
-        `${tenantServiceHost}/api/v1/${tenantId}/entries/${entryToDelete.id}`,
+        `${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries/${entryToDelete.id}`,
         {
           method: "DELETE",
         }
