@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Button,
@@ -21,6 +21,12 @@ import {
   ModalCloseButton,
   Textarea,
   useDisclosure,
+  AlertDialog,
+  AlertDialogBody,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogContent,
+  AlertDialogOverlay,
 } from "@chakra-ui/react";
 import { tenantServiceHost } from "@/app/config";
 
@@ -32,12 +38,27 @@ const ViewKnowledgeBase = ({ tenantId }) => {
   const [isLoadingDocEntries, setIsLoadingDocEntries] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [editedContent, setEditedContent] = useState("");
+  
+  // New state variables for loading
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
   const {
     isOpen: isEditModalOpen,
     onOpen: onEditModalOpen,
     onClose: onEditModalClose,
   } = useDisclosure();
+  
   const toast = useToast();
+
+  // State and disclosure for delete confirmation
+  const {
+    isOpen: isDeleteAlertOpen,
+    onOpen: onDeleteAlertOpen,
+    onClose: onDeleteAlertClose,
+  } = useDisclosure();
+  const [entryToDelete, setEntryToDelete] = useState(null);
+  const cancelRef = useRef();
 
   // Fetch document names
   const fetchDocNames = async () => {
@@ -46,13 +67,13 @@ const ViewKnowledgeBase = ({ tenantId }) => {
       const response = await fetch(
         `${tenantServiceHost}/api/v1/tenant_docs/${tenantId}/`
       );
-      
-     if (response.status === 404) {
+
+      if (response.status === 404) {
         // If 404, set docNames to an empty array
         setDocNames([]);
-        } 
-      
-      if(response.ok) {
+      }
+
+      if (response.ok) {
         const data = await response.json();
         const docNames = data.map((item) => item.doc_name);
         setDocNames(docNames);
@@ -103,6 +124,8 @@ const ViewKnowledgeBase = ({ tenantId }) => {
 
   // Update entry content
   const updateEntryContent = async () => {
+    if (!editingEntry) return;
+    setIsUpdating(true); // Start loading
     try {
       console.log(`edited ${editingEntry.id}`);
       const response = await fetch(
@@ -116,7 +139,8 @@ const ViewKnowledgeBase = ({ tenantId }) => {
         }
       );
       if (!response.ok) {
-        throw new Error("Failed to update entry content");
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to update entry content");
       }
       toast({
         title: "Success",
@@ -130,13 +154,56 @@ const ViewKnowledgeBase = ({ tenantId }) => {
       console.error("Error updating entry content:", error);
       toast({
         title: "Error",
-        description: "Failed to update entry content",
+        description: error.message || "Failed to update entry content",
         status: "error",
         duration: 5000,
         isClosable: true,
       });
     } finally {
+      setIsUpdating(false); // End loading
       onEditModalClose();
+    }
+  };
+
+  // Delete entry
+  const deleteEntry = async () => {
+    if (!entryToDelete) return;
+    setIsDeleting(true); // Start loading
+    try {
+      const response = await fetch(
+        `${tenantServiceHost}/api/v1/${tenantId}/entries/${entryToDelete.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to delete entry");
+      }
+      toast({
+        title: "Deleted",
+        description: "Entry deleted successfully.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+      // Remove the deleted entry from the state
+      setDocEntries((prevEntries) =>
+        prevEntries.filter((entry) => entry.id !== entryToDelete.id)
+      );
+    } catch (error) {
+      console.error("Error deleting entry:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete entry",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsDeleting(false); // End loading
+      setEntryToDelete(null);
+      onDeleteAlertClose();
     }
   };
 
@@ -174,30 +241,47 @@ const ViewKnowledgeBase = ({ tenantId }) => {
                   <Text>Loading entries...</Text>
                 ) : (
                   <VStack align="stretch" spacing={2}>
-                    {docEntries.map((entry, entryIndex) => (
-                      <Box
-                        key={entryIndex}
-                        p={3}
-                        bg="white"
-                        borderRadius="md"
-                        boxShadow="sm"
-                      >
-                        <Text>{entry.content}</Text>
-                        <Button
-                          size="sm"
-                          colorScheme="blue"
-                          mt={2}
-                          onClick={() => {
-                            console.log(`editing ${entry.id}`);
-                            setEditingEntry(entry);
-                            setEditedContent(entry.content);
-                            onEditModalOpen();
-                          }}
+                    {docEntries.length === 0 ? (
+                      <Text>No entries found.</Text>
+                    ) : (
+                      docEntries.map((entry, entryIndex) => (
+                        <Box
+                          key={entryIndex}
+                          p={3}
+                          bg="white"
+                          borderRadius="md"
+                          boxShadow="sm"
                         >
-                          Edit
-                        </Button>
-                      </Box>
-                    ))}
+                          <Text>{entry.content}</Text>
+                          <Button
+                            size="sm"
+                            colorScheme="blue"
+                            mt={2}
+                            mr={2}
+                            onClick={() => {
+                              console.log(`editing ${entry.id}`);
+                              setEditingEntry(entry);
+                              setEditedContent(entry.content);
+                              onEditModalOpen();
+                            }}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            colorScheme="red"
+                            mt={2}
+                            onClick={() => {
+                              console.log(`deleting ${entry.id}`);
+                              setEntryToDelete(entry);
+                              onDeleteAlertOpen();
+                            }}
+                          >
+                            Delete
+                          </Button>
+                        </Box>
+                      ))
+                    )}
                   </VStack>
                 )}
               </AccordionPanel>
@@ -220,7 +304,13 @@ const ViewKnowledgeBase = ({ tenantId }) => {
             />
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={updateEntryContent}>
+            <Button
+              colorScheme="blue"
+              mr={3}
+              onClick={updateEntryContent}
+              isLoading={isUpdating} // Show loading state
+              loadingText="Saving"
+            >
               Save
             </Button>
             <Button variant="ghost" onClick={onEditModalClose}>
@@ -229,6 +319,41 @@ const ViewKnowledgeBase = ({ tenantId }) => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+
+      {/* Delete Confirmation AlertDialog */}
+      <AlertDialog
+        isOpen={isDeleteAlertOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={onDeleteAlertClose}
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold">
+              Delete Entry
+            </AlertDialogHeader>
+
+            <AlertDialogBody>
+              Are you sure you want to delete this entry? This action cannot be
+              undone.
+            </AlertDialogBody>
+
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={onDeleteAlertClose}>
+                Cancel
+              </Button>
+              <Button
+                colorScheme="red"
+                onClick={deleteEntry}
+                ml={3}
+                isLoading={isDeleting} // Show loading state
+                loadingText="Deleting"
+              >
+                Delete
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };
