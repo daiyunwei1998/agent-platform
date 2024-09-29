@@ -115,7 +115,7 @@ const BotManagement = ({ tenantId }) => {
     const message = JSON.parse(payload.body);
     console.log("Received worker message:", message);
 
-    const filename = message.filename;
+    const filename = message.file;
 
     setPendingTasks((prevTasks) => {
       const newTasks = prevTasks.filter((name) => name !== filename);
