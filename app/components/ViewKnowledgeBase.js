@@ -125,6 +125,19 @@ const ViewKnowledgeBase = ({ tenantId }) => {
   // Update entry content
   const updateEntryContent = async () => {
     if (!editingEntry) return;
+
+    // Check if the edited content is empty
+  if (editedContent.trim() === "") {
+    toast({
+      title: "Error",
+      description: "Content cannot be empty. Please enter valid content.",
+      status: "error",
+      duration: 5000,
+      isClosable: true,
+    });
+    return; // Do not proceed with the API call if the content is empty
+  }
+
     setIsUpdating(true); // Start loading
     try {
       console.log(`edited ${editingEntry.id}`);
