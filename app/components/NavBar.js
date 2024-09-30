@@ -20,6 +20,9 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
   const [loggedIn, setLoggedIn] = useState(initialLoggedIn)
   const [cookies, setCookie, removeCookie] = useCookies(['jwt', 'tenantId']); 
 
+  useEffect(() => {
+    setLoggedIn(initialLoggedIn);
+  }, [initialLoggedIn]);
 
   // Use responsive value to hide text on smaller screens
   const showText = useBreakpointValue({ base: false, md: true })
