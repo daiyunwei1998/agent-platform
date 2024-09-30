@@ -42,7 +42,7 @@ import axios from 'axios';
 import { tenantServiceHost } from '@/app/config';
 import { format, parseISO } from 'date-fns';
 
-const BillingPage = ({tenantId}) => {
+const BillingPage = ({ tenantId }) => {
   const [usageData, setUsageData] = useState([]);
   const [totalUsage, setTotalUsage] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
@@ -107,15 +107,23 @@ const BillingPage = ({tenantId}) => {
           { period: 'Jun 2024', tokensUsed: 480000, totalPrice: 48.0 },
         ]);
       } catch (error) {
-        console.error('Error fetching usage data:', error);
-        setError(error.message);
+        if (error.response && error.response.status === 404) {
+          // Handle 404 - set empty data
+          setUsageData([]);
+          setTotalUsage(0);
+          setTotalPrice(0);
+          console.log('No usage data found for the selected period.');
+        } else {
+          console.error('Error fetching usage data:', error);
+          setError(error.message);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [tenantId]);
 
   const handleSaveAlertThreshold = () => {
     // Implement saving logic here
