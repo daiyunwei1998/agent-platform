@@ -15,28 +15,30 @@ const BillingPage = () => {
   const borderColor = useColorModeValue('gray.200', 'gray.600');
 
   useEffect(() => {
+    const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await axios.get(`${tenantServiceHost}/api/v1/usage/monthly/daily/?tenant_id=tenant_53&year=2024&month=9`);
+        const response = await axios.get(`${tenantServiceHost}/api/v1/usage/monthly/daily/`, {
+          params: {
+            tenant_id: 'tenant_53',
+            year: 2024,
+            month: 9,
+            timezone_offset_minutes: timezoneOffsetMinutes,
+          },});
         console.log('API Response:', response.data); // Debugging log
 
         if (!Array.isArray(response.data) || response.data.length === 0) {
           throw new Error('Invalid data received from API');
         }
 
-        const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-        const formattedData = response.data.map(item => {
-          const date = parseISO(item.date);
-          const zonedDate = new Date(date.toLocaleString('en-US', { timeZone: userTimeZone }));
-          return {
-            date: format(zonedDate, 'MMM dd'),
-            tokens: item.tokens_used,
-            price: item.total_price
-          };
-        });
+        const formattedData = response.data.map(item => ({
+          date: format(parseISO(item.date), 'MMM dd'),
+          tokens: item.tokens_used,
+          price: item.total_price,
+        }));
+        
 
         console.log('Formatted Data:', formattedData); // Debugging log
 
