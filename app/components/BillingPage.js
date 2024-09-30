@@ -42,7 +42,7 @@ import axios from 'axios';
 import { tenantServiceHost } from '@/app/config';
 import { format, parseISO } from 'date-fns';
 
-const BillingPage = () => {
+const BillingPage = ({tenantId}) => {
   const [usageData, setUsageData] = useState([]);
   const [totalUsage, setTotalUsage] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
@@ -65,7 +65,7 @@ const BillingPage = () => {
           `${tenantServiceHost}/api/v1/usage/monthly/daily/`,
           {
             params: {
-              tenant_id: 'tenant_53',
+              tenant_id: tenantId,
               year: 2024,
               month: 9,
               timezone_offset_minutes: timezoneOffsetMinutes,
