@@ -103,7 +103,14 @@ const BillingPage = () => {
                 <XAxis dataKey="date" />
                 <YAxis />
                 <Tooltip 
-                  formatter={(value, name) => [value.toLocaleString(), name === 'tokens' ? 'Tokens' : 'Price']}
+                  formatter={(value, dataKey) => {
+                    if (dataKey === 'tokens') {
+                      return [value.toLocaleString(), 'Tokens']; // Label correctly as "Tokens"
+                    } else if (dataKey === 'price') {
+                      return [`$${value.toFixed(2)}`, 'Price']; // Label correctly as "Price"
+                    }
+                    return [value, dataKey]; // Fallback in case of unexpected dataKey
+                  }}
                   labelFormatter={(label) => `Date: ${label}`}
                 />
                 <Line type="monotone" dataKey="tokens" stroke="#3182CE" name="Tokens" />
