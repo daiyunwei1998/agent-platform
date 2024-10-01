@@ -29,6 +29,7 @@ import {
   ModalBody,
   ModalCloseButton,
   Input,
+  useBreakpointValue,
 } from '@chakra-ui/react';
 import {
   LineChart,
@@ -52,8 +53,14 @@ const BillingPage = ({ tenantId }) => {
   const [showUsageDetails, setShowUsageDetails] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [alertThreshold, setAlertThreshold] = useState('');
-  const bgColor = useColorModeValue('gray.50', 'gray.700');
+
+  const bgColor = useColorModeValue('white', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const shadowColor = useColorModeValue('rgba(0, 0, 0, 0.1)', 'rgba(255, 255, 255, 0.1)');
+
+  const responsiveSpacing = useBreakpointValue({ base: 4, md: 6, lg: 8 });
+  const responsivePadding = useBreakpointValue({ base: 4, md: 6, lg: 8 });
+  const responsiveDirection = useBreakpointValue({ base: 'column', md: 'row' });
 
   useEffect(() => {
     const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
@@ -72,7 +79,6 @@ const BillingPage = ({ tenantId }) => {
             },
           }
         );
-        console.log('API Response:', response.data); // Debugging log
 
         if (!Array.isArray(response.data) || response.data.length === 0) {
           throw new Error('Invalid data received from API');
@@ -83,8 +89,6 @@ const BillingPage = ({ tenantId }) => {
           tokens: item.tokens_used,
           price: item.total_price,
         }));
-
-        console.log('Formatted Data:', formattedData); // Debugging log
 
         setUsageData(formattedData);
         const totalTokens = formattedData.reduce(
@@ -98,8 +102,6 @@ const BillingPage = ({ tenantId }) => {
         setTotalUsage(totalTokens);
         setTotalPrice(totalCost);
 
-        console.log('Total Usage:', totalTokens, 'Total Price:', totalCost); // Debugging log
-
         // Set fake billing history data
         setBillingHistory([
           { period: 'Aug 2024', tokensUsed: 500000, totalPrice: 50.0 },
@@ -108,7 +110,6 @@ const BillingPage = ({ tenantId }) => {
         ]);
       } catch (error) {
         if (error.response && error.response.status === 404) {
-          // Handle 404 - set empty data
           setUsageData([]);
           setTotalUsage(0);
           setTotalPrice(0);
@@ -130,6 +131,25 @@ const BillingPage = ({ tenantId }) => {
     console.log('Alert threshold set to:', alertThreshold);
     setIsAlertModalOpen(false);
   };
+
+  const FloatingBox = ({ children, ...props }) => (
+    <Box
+      backgroundColor={bgColor}
+      borderRadius="lg"
+      p={responsivePadding}
+      border="1px"
+      borderColor={borderColor}
+      boxShadow={`0 4px 6px ${shadowColor}`}
+      transition="all 0.3s"
+      _hover={{
+        boxShadow: `0 6px 8px ${shadowColor}`,
+        transform: 'translateY(-2px)',
+      }}
+      {...props}
+    >
+      {children}
+    </Box>
+  );
 
   if (isLoading) {
     return (
@@ -154,47 +174,31 @@ const BillingPage = ({ tenantId }) => {
   }
 
   return (
-    <Box maxWidth="1200px" margin="auto" padding={8}>
-      <VStack spacing={8} align="stretch">
+    <Box maxWidth="1200px" margin="auto" padding={responsivePadding}>
+      <VStack spacing={responsiveSpacing} align="stretch">
         <Heading as="h1" size="xl">
           Billing Dashboard
         </Heading>
 
-        <HStack spacing={8} align="stretch">
-          <Stat
-            flex={1}
-            backgroundColor={bgColor}
-            borderRadius="md"
-            p={4}
-            border="1px"
-            borderColor={borderColor}
-          >
-            <StatLabel>Current Usage</StatLabel>
-            <StatNumber>{totalUsage.toLocaleString()} tokens</StatNumber>
-            <StatHelpText>Sep 1 - Sep 30, 2024</StatHelpText>
-          </Stat>
-          <Stat
-            flex={1}
-            backgroundColor={bgColor}
-            borderRadius="md"
-            p={4}
-            border="1px"
-            borderColor={borderColor}
-          >
-            <StatLabel>Estimated Bill</StatLabel>
-            <StatNumber>${totalPrice.toFixed(2)}</StatNumber>
-            <StatHelpText>Based on current usage</StatHelpText>
-          </Stat>
+        <HStack spacing={responsiveSpacing} align="stretch" flexDirection={responsiveDirection}>
+          <FloatingBox flex={1}>
+            <Stat>
+              <StatLabel>Current Usage</StatLabel>
+              <StatNumber>{totalUsage.toLocaleString()} tokens</StatNumber>
+              <StatHelpText>Sep 1 - Sep 30, 2024</StatHelpText>
+            </Stat>
+          </FloatingBox>
+          <FloatingBox flex={1}>
+            <Stat>
+              <StatLabel>Estimated Bill</StatLabel>
+              <StatNumber>${totalPrice.toFixed(2)}</StatNumber>
+              <StatHelpText>Based on current usage</StatHelpText>
+            </Stat>
+          </FloatingBox>
         </HStack>
 
         {usageData.length > 0 ? (
-          <Box
-            backgroundColor={bgColor}
-            borderRadius="md"
-            p={4}
-            border="1px"
-            borderColor={borderColor}
-          >
+          <FloatingBox>
             <Heading as="h2" size="md" mb={4}>
               Daily Usage This Billing Period
             </Heading>
@@ -205,11 +209,11 @@ const BillingPage = ({ tenantId }) => {
                 <Tooltip
                   formatter={(value, dataKey) => {
                     if (dataKey === 'tokens') {
-                      return [value.toLocaleString(), 'Tokens']; // Label correctly as "Tokens"
+                      return [value.toLocaleString(), 'Tokens'];
                     } else if (dataKey === 'price') {
-                      return [`$${value.toFixed(2)}`, 'Price']; // Label correctly as "Price"
+                      return [`$${value.toFixed(2)}`, 'Price'];
                     }
-                    return [value, dataKey]; // Fallback in case of unexpected dataKey
+                    return [value, dataKey];
                   }}
                   labelFormatter={(label) => `Date: ${label}`}
                 />
@@ -221,7 +225,7 @@ const BillingPage = ({ tenantId }) => {
                 />
               </LineChart>
             </ResponsiveContainer>
-          </Box>
+          </FloatingBox>
         ) : (
           <Alert status="warning">
             <AlertIcon />
@@ -229,14 +233,8 @@ const BillingPage = ({ tenantId }) => {
           </Alert>
         )}
 
-        {usageData.length > 0 ? (
-          <Box
-            backgroundColor={bgColor}
-            borderRadius="md"
-            p={4}
-            border="1px"
-            borderColor={borderColor}
-          >
+        {usageData.length > 0 && (
+          <FloatingBox>
             <Heading
               as="h2"
               size="md"
@@ -271,17 +269,10 @@ const BillingPage = ({ tenantId }) => {
                 </Text>
               )}
             </Collapse>
-          </Box>
-        ) : null}
+          </FloatingBox>
+        )}
 
-        {/* Billing History Section */}
-        <Box
-          backgroundColor={bgColor}
-          borderRadius="md"
-          p={4}
-          border="1px"
-          borderColor={borderColor}
-        >
+        <FloatingBox>
           <Heading as="h2" size="md" mb={4}>
             Billing History
           </Heading>
@@ -309,13 +300,11 @@ const BillingPage = ({ tenantId }) => {
               ))}
             </Tbody>
           </Table>
-        </Box>
+        </FloatingBox>
 
-        <HStack justify="space-between">
-          <Button colorScheme="blue">Update Payment Method</Button>
-          <Button onClick={() => setIsAlertModalOpen(true)}>
-            Set Usage Alert
-          </Button>
+        <HStack justify="space-between" flexDirection={responsiveDirection}>
+          <Button colorScheme="blue" mb={{ base: 2, md: 0 }}>Update Payment Method</Button>
+          <Button onClick={() => setIsAlertModalOpen(true)}>Set Usage Alert</Button>
         </HStack>
       </VStack>
 
