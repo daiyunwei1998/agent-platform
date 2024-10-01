@@ -27,8 +27,37 @@ import {
   AlertDialogHeader,
   AlertDialogContent,
   AlertDialogOverlay,
+  useBreakpointValue,
+  useColorModeValue
 } from "@chakra-ui/react";
 import { tenantServiceHost } from "@/app/config";
+
+// Move FloatingBox outside of ViewKnowledgeBase
+const FloatingBox = ({
+  children,
+  responsivePadding,
+  bgColor,
+  borderColor,
+  shadowColor,
+  ...props
+}) => (
+  <Box
+    backgroundColor={bgColor}
+    borderRadius="lg"
+    p={responsivePadding}
+    border="1px"
+    borderColor={borderColor}
+    boxShadow={`0 4px 6px ${shadowColor}`}
+    transition="all 0.3s"
+    _hover={{
+      boxShadow: `0 6px 8px ${shadowColor}`,
+      transform: 'translateY(-2px)',
+    }}
+    {...props}
+  >
+    {children}
+  </Box>
+);
 
 const ViewKnowledgeBase = ({ tenantId }) => {
   const [docNames, setDocNames] = useState([]);
@@ -38,8 +67,6 @@ const ViewKnowledgeBase = ({ tenantId }) => {
   const [isLoadingDocEntries, setIsLoadingDocEntries] = useState(false);
   const [editingEntry, setEditingEntry] = useState(null);
   const [editedContent, setEditedContent] = useState("");
-  
-  // New state variables for loading
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -49,18 +76,16 @@ const ViewKnowledgeBase = ({ tenantId }) => {
     onClose: onEditModalClose,
   } = useDisclosure();
   
-  const toast = useToast();
-
-  // State and disclosure for delete confirmation
   const {
     isOpen: isDeleteAlertOpen,
     onOpen: onDeleteAlertOpen,
     onClose: onDeleteAlertClose,
   } = useDisclosure();
+  
   const [entryToDelete, setEntryToDelete] = useState(null);
   const cancelRef = useRef();
+  const toast = useToast();
 
-  // Fetch document names
   const fetchDocNames = async () => {
     setIsLoadingDocNames(true);
     try {
@@ -69,7 +94,6 @@ const ViewKnowledgeBase = ({ tenantId }) => {
       );
 
       if (response.status === 404) {
-        // If 404, set docNames to an empty array
         setDocNames([]);
       }
 
@@ -92,7 +116,6 @@ const ViewKnowledgeBase = ({ tenantId }) => {
     }
   };
 
-  // Fetch entries for a selected document
   const fetchDocEntries = async (docName) => {
     setIsLoadingDocEntries(true);
     try {
@@ -122,23 +145,21 @@ const ViewKnowledgeBase = ({ tenantId }) => {
     }
   };
 
-  // Update entry content
   const updateEntryContent = async () => {
     if (!editingEntry) return;
 
-    // Check if the edited content is empty
-  if (editedContent.trim() === "") {
-    toast({
-      title: "Error",
-      description: "Content cannot be empty. Please enter valid content.",
-      status: "error",
-      duration: 5000,
-      isClosable: true,
-    });
-    return; // Do not proceed with the API call if the content is empty
-  }
+    if (editedContent.trim() === "") {
+      toast({
+        title: "Error",
+        description: "Content cannot be empty. Please enter valid content.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
-    setIsUpdating(true); // Start loading
+    setIsUpdating(true);
     try {
       console.log(`edited ${editingEntry.id}`);
       const response = await fetch(
@@ -173,15 +194,14 @@ const ViewKnowledgeBase = ({ tenantId }) => {
         isClosable: true,
       });
     } finally {
-      setIsUpdating(false); // End loading
+      setIsUpdating(false);
       onEditModalClose();
     }
   };
 
-  // Delete entry
   const deleteEntry = async () => {
     if (!entryToDelete) return;
-    setIsDeleting(true); // Start loading
+    setIsDeleting(true);
     try {
       const response = await fetch(
         `${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries/${entryToDelete.id}`,
@@ -200,7 +220,6 @@ const ViewKnowledgeBase = ({ tenantId }) => {
         duration: 5000,
         isClosable: true,
       });
-      // Remove the deleted entry from the state
       setDocEntries((prevEntries) =>
         prevEntries.filter((entry) => entry.id !== entryToDelete.id)
       );
@@ -214,94 +233,106 @@ const ViewKnowledgeBase = ({ tenantId }) => {
         isClosable: true,
       });
     } finally {
-      setIsDeleting(false); // End loading
+      setIsDeleting(false);
       setEntryToDelete(null);
       onDeleteAlertClose();
     }
   };
 
-  // Fetch documents on component mount
   useEffect(() => {
     fetchDocNames();
   }, []);
 
+  const responsiveSpacing = useBreakpointValue({ base: 4, md: 6, lg: 8 });
+  const responsivePadding = useBreakpointValue({ base: 4, md: 6, lg: 8 });
+  const bgColor = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const shadowColor = useColorModeValue('rgba(0, 0, 0, 0.1)', 'rgba(255, 255, 255, 0.1)');
+
   return (
-    <Box>
-      <Heading size="lg" mb={4}>
-        Knowledge Base
-      </Heading>
-      {isLoadingDocNames ? (
-        <Text>Loading document names...</Text>
-      ) : (
-        <Accordion allowToggle>
-          {docNames.map((docName, index) => (
-            <AccordionItem key={index}>
-              <h2>
-                <AccordionButton
-                  onClick={() => {
-                    setSelectedDoc(docName);
-                    fetchDocEntries(docName);
-                  }}
-                >
-                  <Box flex="1" textAlign="left">
-                    {docName}
-                  </Box>
-                  <AccordionIcon />
-                </AccordionButton>
-              </h2>
-              <AccordionPanel pb={4}>
-                {isLoadingDocEntries && selectedDoc === docName ? (
-                  <Text>Loading entries...</Text>
-                ) : (
-                  <VStack align="stretch" spacing={2}>
-                    {docEntries.length === 0 ? (
-                      <Text>No entries found.</Text>
+    <Box maxWidth="1200px" margin="auto" padding={responsivePadding}>
+      <VStack spacing={responsiveSpacing} align="stretch">
+        <Heading as="h1" size="xl">
+          Knowledge Base
+        </Heading>
+        <FloatingBox
+          responsivePadding={responsivePadding}
+          bgColor={bgColor}
+          borderColor={borderColor}
+          shadowColor={shadowColor}
+        >
+          {isLoadingDocNames ? (
+            <Text>Loading document names...</Text>
+          ) : (
+            <Accordion allowToggle>
+              {docNames.map((docName, index) => (
+                <AccordionItem key={index}>
+                  <h2>
+                    <AccordionButton
+                      onClick={() => {
+                        setSelectedDoc(docName);
+                        fetchDocEntries(docName);
+                      }}
+                    >
+                      <Box flex="1" textAlign="left">
+                        {docName}
+                      </Box>
+                      <AccordionIcon />
+                    </AccordionButton>
+                  </h2>
+                  <AccordionPanel pb={4}>
+                    {isLoadingDocEntries && selectedDoc === docName ? (
+                      <Text>Loading entries...</Text>
                     ) : (
-                      docEntries.map((entry, entryIndex) => (
-                        <Box
-                          key={entryIndex}
-                          p={3}
-                          bg="white"
-                          borderRadius="md"
-                          boxShadow="sm"
-                        >
-                          <Text>{entry.content}</Text>
-                          <Button
-                            size="sm"
-                            colorScheme="blue"
-                            mt={2}
-                            mr={2}
-                            onClick={() => {
-                              console.log(`editing ${entry.id}`);
-                              setEditingEntry(entry);
-                              setEditedContent(entry.content);
-                              onEditModalOpen();
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            colorScheme="red"
-                            mt={2}
-                            onClick={() => {
-                              console.log(`deleting ${entry.id}`);
-                              setEntryToDelete(entry);
-                              onDeleteAlertOpen();
-                            }}
-                          >
-                            Delete
-                          </Button>
-                        </Box>
-                      ))
+                      <VStack align="stretch" spacing={2}>
+                        {docEntries.length === 0 ? (
+                          <Text>No entries found.</Text>
+                        ) : (
+                          docEntries.map((entry, entryIndex) => (
+                            <Box
+                              key={entryIndex}
+                              p={3}
+                              borderWidth="1px"
+                              borderRadius="md"
+                              borderColor={borderColor}
+                            >
+                              <Text>{entry.content}</Text>
+                              <Button
+                                size="sm"
+                                colorScheme="blue"
+                                mt={2}
+                                mr={2}
+                                onClick={() => {
+                                  setEditingEntry(entry);
+                                  setEditedContent(entry.content);
+                                  onEditModalOpen();
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                colorScheme="red"
+                                mt={2}
+                                onClick={() => {
+                                  setEntryToDelete(entry);
+                                  onDeleteAlertOpen();
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </Box>
+                          ))
+                        )}
+                      </VStack>
                     )}
-                  </VStack>
-                )}
-              </AccordionPanel>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      )}
+                  </AccordionPanel>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          )}
+        </FloatingBox>
+      </VStack>
 
       {/* Edit Entry Modal */}
       <Modal isOpen={isEditModalOpen} onClose={onEditModalClose}>
@@ -321,7 +352,7 @@ const ViewKnowledgeBase = ({ tenantId }) => {
               colorScheme="blue"
               mr={3}
               onClick={updateEntryContent}
-              isLoading={isUpdating} // Show loading state
+              isLoading={isUpdating}
               loadingText="Saving"
             >
               Save
@@ -333,7 +364,7 @@ const ViewKnowledgeBase = ({ tenantId }) => {
         </ModalContent>
       </Modal>
 
-      {/* Delete Confirmation AlertDialog */}
+      {/* Delete Entry Alert Dialog */}
       <AlertDialog
         isOpen={isDeleteAlertOpen}
         leastDestructiveRef={cancelRef}
@@ -346,8 +377,7 @@ const ViewKnowledgeBase = ({ tenantId }) => {
             </AlertDialogHeader>
 
             <AlertDialogBody>
-              Are you sure you want to delete this entry? This action cannot be
-              undone.
+              Are you sure you want to delete this entry? This action cannot be undone.
             </AlertDialogBody>
 
             <AlertDialogFooter>
@@ -358,7 +388,7 @@ const ViewKnowledgeBase = ({ tenantId }) => {
                 colorScheme="red"
                 onClick={deleteEntry}
                 ml={3}
-                isLoading={isDeleting} // Show loading state
+                isLoading={isDeleting}
                 loadingText="Deleting"
               >
                 Delete
