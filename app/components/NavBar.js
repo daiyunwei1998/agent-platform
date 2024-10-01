@@ -74,7 +74,7 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
     <Box bg={bgColor} borderBottom={`1px solid ${borderColor}`} p={4}>
       <Flex justify="space-between" align="center">
         {/* Admin Dashboard title with icon */}
-        <Link href="/">
+        <Link href="/admin/bot-management">
           <Flex align="center">
             <Image src={logo} alt="User" boxSize="40px"/>
             <Box fontSize="2xl" fontWeight="bold" ml={4}>
