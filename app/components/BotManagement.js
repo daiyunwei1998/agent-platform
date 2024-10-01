@@ -23,7 +23,7 @@ import TestQuery from "./TestQuery";
 import BillingPage from "./BillingPage";
 
 const BotManagement = ({ tenantId }) => {
-  const [activeSection, setActiveSection] = useState("updateKnowledgeBase");
+  const [activeSection, setActiveSection] = useState("knowledge");
   const [pendingTasks, setPendingTasks] = useState([]);
   const clientRef = useRef(null);
   const toast = useToast();
