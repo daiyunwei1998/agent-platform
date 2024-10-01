@@ -1,6 +1,7 @@
 "use client"
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import {imageHost} from '@/app/config'
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();  // Gets the current path

@@ -91,6 +91,16 @@ export default async function RootLayout({ children }) {
         <Providers>
         <NavbarWrapper logo={tenantInfo.logo} name={tenantInfo.name}/>
           {children}
+
+          <footer style={{ backgroundColor:"rgb(248, 250, 252)", textAlign: 'center', padding: '20px', marginTop: 'auto' }}>
+            <a
+              href="/demo/infra"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              © 2024 閃應 All rights reserved.
+            </a>
+          </footer>
+
         </Providers>
       </body>
     </html>

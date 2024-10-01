@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, VStack, HStack, Text, Icon, Image, Flex, useBreakpointValue } from '@chakra-ui/react';
 import { FaDatabase, FaFileAlt, FaArrowRight } from 'react-icons/fa';
 import { BsBodyText } from "react-icons/bs";
+import {imageHost} from '@/app/config'
 
 const FloatingIsland = ({ children, isActive, onMouseEnter, onMouseLeave }) => (
   <Box
