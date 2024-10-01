@@ -42,6 +42,7 @@ import {
 import axios from 'axios';
 import { tenantServiceHost } from '@/app/config';
 import { format, parseISO } from 'date-fns';
+import getCurrentMonthRange from '@/utils/getCurrentMonthRange';
 
 const BillingPage = ({ tenantId }) => {
   const [usageData, setUsageData] = useState([]);
@@ -68,13 +69,14 @@ const BillingPage = ({ tenantId }) => {
       setIsLoading(true);
       setError(null);
       try {
+        const today = new Date();
         const response = await axios.get(
           `${tenantServiceHost}/api/v1/usage/monthly/daily/`,
           {
             params: {
               tenant_id: tenantId,
-              year: 2024,
-              month: 9,
+              year: today.getFullYear(),
+              month: today.getMonth() + 1,
               timezone_offset_minutes: timezoneOffsetMinutes,
             },
           }
@@ -173,6 +175,8 @@ const BillingPage = ({ tenantId }) => {
     );
   }
 
+  const periodString = getCurrentMonthRange();
+
   return (
     <Box maxWidth="1200px" margin="auto" padding={responsivePadding}>
       <VStack spacing={responsiveSpacing} align="stretch">
@@ -185,7 +189,7 @@ const BillingPage = ({ tenantId }) => {
             <Stat>
               <StatLabel>Current Usage</StatLabel>
               <StatNumber>{totalUsage.toLocaleString()} tokens</StatNumber>
-              <StatHelpText>Sep 1 - Sep 30, 2024</StatHelpText>
+              <StatHelpText>{periodString}</StatHelpText>
             </Stat>
           </FloatingBox>
           <FloatingBox flex={1}>
