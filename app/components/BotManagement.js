@@ -88,70 +88,108 @@ const BotManagement = ({ tenantId }) => {
   return (
     <Box minH="100vh" bg={bgColor}>
       <Container maxW="container.xl" p={0}>
-        <Flex>
-          {!isMobile && (
+        <Flex direction="column" minH="100vh">
+          <Flex flex="1">
+            {!isMobile && (
+              <Box
+                w="80px"
+                minW="80px"
+                bg={sidebarBgColor}
+                position="sticky"
+                top="20px"
+                alignSelf="flex-start"
+                borderRadius="xl"
+                boxShadow={`0 4px 12px ${shadowColor}`}
+                mr={4}
+                p={4}
+                mt={16}
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                maxH="calc(100vh - 40px)"
+                overflowY="auto"
+                overflowX="hidden"
+              >
+                <VStack spacing={6} align="center" width="100%">
+                  {menuItems.map((item) => (
+                    <Button
+                      key={item.value}
+                      onClick={() => setActiveSection(item.value)}
+                      color={activeSection === item.value ? buttonActiveColor : "gray.500"}
+                      bg="transparent"
+                      _hover={{ bg: buttonHoverBgColor }}
+                      borderRadius="md"
+                      w="100%"
+                      h="60px"
+                      p={0}
+                      display="flex"
+                      flexDirection="column"
+                      justifyContent="center"
+                      alignItems="center"
+                    >
+                      <Icon as={item.icon} boxSize={6} mb={1} />
+                      <Box fontSize="xs" textAlign="center" whiteSpace="normal" wordBreak="break-word">{item.label}</Box>
+                    </Button>
+                  ))}
+                </VStack>
+              </Box>
+            )}
+
+            <Box flex={1} p={8} pb={isMobile ? "100px" : "8"}>
+              {activeSection === "knowledge" && (
+                <>
+                  <UpdateKnowledgeBase
+                    tenantId={tenantId}
+                    pendingTasks={pendingTasks}
+                    setPendingTasks={setPendingTasks}
+                    connect={connect}
+                    clientRef={clientRef}
+                  />
+                  <ViewKnowledgeBase tenantId={tenantId} />
+                </>
+              )}
+
+              {activeSection === "test" && <TestQuery tenantId={tenantId} />}
+              {activeSection === "billing" && <BillingPage tenantId={tenantId} />}
+            </Box>
+          </Flex>
+
+          {isMobile && (
             <Box
-              w="80px"
-              minW="80px"
+              position="fixed"
+              bottom="0"
+              width="100%"
               bg={sidebarBgColor}
-              position="sticky"
-              top="20px"
-              alignSelf="flex-start"
-              borderRadius="xl"
-              boxShadow={`0 4px 12px ${shadowColor}`}
-              mr={4}
-              p={4}
-              mt={16}
+              boxShadow={`0 -4px 12px ${shadowColor}`}
+              p={2}
               display="flex"
-              flexDirection="column"
-              alignItems="center"
-              maxH="calc(100vh - 40px)"
-              overflowY="auto"
-              overflowX="hidden"
+              justifyContent="space-around"
+              zIndex="10"
             >
-              <VStack spacing={6} align="center" width="100%">
-                {menuItems.map((item) => (
-                  <Button
-                    key={item.value}
-                    onClick={() => setActiveSection(item.value)}
-                    color={activeSection === item.value ? buttonActiveColor : "gray.500"}
-                    bg="transparent"
-                    _hover={{ bg: buttonHoverBgColor }}
-                    borderRadius="md"
-                    w="100%"
-                    h="60px"
-                    p={0}
-                    display="flex"
-                    flexDirection="column"
-                    justifyContent="center"
-                    alignItems="center"
-                  >
-                    <Icon as={item.icon} boxSize={6} mb={1} />
-                    <Box fontSize="xs" textAlign="center" whiteSpace="normal" wordBreak="break-word">{item.label}</Box>
-                  </Button>
-                ))}
-              </VStack>
+              {menuItems.map((item) => (
+                <Button
+                  key={item.value}
+                  onClick={() => setActiveSection(item.value)}
+                  color={activeSection === item.value ? buttonActiveColor : "gray.500"}
+                  bg="transparent"
+                  _hover={{ bg: buttonHoverBgColor }}
+                  borderRadius="md"
+                  w="100%"
+                  h="60px"
+                  p={0}
+                  display="flex"
+                  flexDirection="column"
+                  justifyContent="center"
+                  alignItems="center"
+                >
+                  <Icon as={item.icon} boxSize={6} mb={1} />
+                  <Box fontSize="xs" textAlign="center" whiteSpace="normal" wordBreak="break-word">
+                    {item.label}
+                  </Box>
+                </Button>
+              ))}
             </Box>
           )}
-
-        <Box flex={1} p={8}>
-          {activeSection === "knowledge" && (
-            <>
-              <UpdateKnowledgeBase
-                tenantId={tenantId}
-                pendingTasks={pendingTasks}
-                setPendingTasks={setPendingTasks}
-                connect={connect}
-                clientRef={clientRef}
-              />
-              <ViewKnowledgeBase tenantId={tenantId} />
-            </>
-          )}
-
-          {activeSection === "test" && <TestQuery tenantId={tenantId} />}
-          {activeSection === "billing" && <BillingPage tenantId={tenantId} />}
-        </Box>
-
         </Flex>
       </Container>
     </Box>
