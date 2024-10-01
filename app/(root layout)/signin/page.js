@@ -324,7 +324,7 @@ const Signin = () => {
           )}
           
           <Text fontSize="sm" color="gray.500" textAlign="center" mt={4}>
-            © 2024 閃應雲 All rights reserved.
+            © 2024 閃應 All rights reserved.
           </Text>
         </VStack>
       </Container>
