@@ -60,7 +60,7 @@ export default function LoginPage() {
             </Flex>
             {/* Right side*/}
             <img 
-        src="/infra.png" 
+        src={`${imageHost}/demo/infra.png`}
         alt="Infrastructure Diagram"
         className="max-w-[calc(100%+80px)] max-h-[calc(100vh-80px)] object-contain"
       />

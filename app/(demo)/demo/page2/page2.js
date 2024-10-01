@@ -65,7 +65,7 @@ const Page2 = () => {
             <Icon as={FaArrowRight} boxSize={arrowSize} color="gray.500" />
           </HStack>
           <Image 
-            src="/openai-logo.png" 
+            src={`${imageHost}/demo/openai-logo.png`}
             alt="OpenAI" 
             width="80px"
             height="26px"
@@ -85,7 +85,7 @@ const Page2 = () => {
         onMouseEnter={() => setActiveSection(2)}
         onMouseLeave={() => setActiveSection(null)}
       >
-        <Image src="/chat-example.png" alt="Chat Example" w="100%" h="auto" />
+        <Image src={`${imageHost}/demo/chat-example.png`} alt="Chat Example" w="100%" h="auto" />
         <Text color="rgb(66,153,225)" fontWeight="bold" mt={2} textAlign="center" fontSize="sm">串接既有服務</Text>
       </FloatingIsland>
     </VStack>
