@@ -7,10 +7,39 @@ import {
   VStack,
   Heading,
   useToast,
+  useBreakpointValue,
+  useColorModeValue,
 } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown";
 import { aiServiceHost } from "@/app/config";
 import styles from "./TestQuery.module.css";
+
+// Move FloatingBox outside of TestQuery
+const FloatingBox = ({
+  children,
+  responsivePadding,
+  bgColor,
+  borderColor,
+  shadowColor,
+  ...props
+}) => (
+  <Box
+    backgroundColor={bgColor}
+    borderRadius="lg"
+    p={responsivePadding}
+    border="1px"
+    borderColor={borderColor}
+    boxShadow={`0 4px 6px ${shadowColor}`}
+    transition="all 0.3s"
+    _hover={{
+      boxShadow: `0 6px 8px ${shadowColor}`,
+      transform: "translateY(-2px)",
+    }}
+    {...props}
+  >
+    {children}
+  </Box>
+);
 
 const TestQuery = ({ tenantId }) => {
   const [query, setQuery] = useState("");
@@ -18,7 +47,6 @@ const TestQuery = ({ tenantId }) => {
   const [isLoadingQuery, setIsLoadingQuery] = useState(false);
   const toast = useToast();
 
-  // Handle Test Query (AI Retrieval)
   const handleTestQuery = async () => {
     setIsLoadingQuery(true);
 
@@ -55,33 +83,50 @@ const TestQuery = ({ tenantId }) => {
     }
   };
 
+  const responsiveSpacing = useBreakpointValue({ base: 4, md: 6, lg: 8 });
+  const responsivePadding = useBreakpointValue({ base: 4, md: 6, lg: 8 });
+  const bgColor = useColorModeValue("white", "gray.700");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const shadowColor = useColorModeValue(
+    "rgba(0, 0, 0, 0.1)",
+    "rgba(255, 255, 255, 0.1)"
+  );
+
   return (
-    <Box>
-      <Heading size="lg" mb={4}>
-        Test Query
-      </Heading>
-      <VStack spacing={4} align="stretch">
-        <Input
-          placeholder="Enter your query"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        <Button
-          colorScheme="blue"
-          onClick={handleTestQuery}
-          isLoading={isLoadingQuery}
-          isDisabled={isLoadingQuery || query === ""}
+    <Box maxWidth="1200px" margin="auto" padding={responsivePadding}>
+      <VStack spacing={responsiveSpacing} align="stretch">
+        <Heading as="h1" size="xl">
+          Test Query
+        </Heading>
+        <FloatingBox
+          responsivePadding={responsivePadding}
+          bgColor={bgColor}
+          borderColor={borderColor}
+          shadowColor={shadowColor}
         >
-          Run Query
-        </Button>
-        <Box
-          border="1px solid"
-          borderColor="gray.200"
-          borderRadius="md"
-          p={4}
+          <VStack spacing={4} align="stretch">
+            <Input
+              placeholder="Enter your query"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            <Button
+              colorScheme="blue"
+              onClick={handleTestQuery}
+              isLoading={isLoadingQuery}
+              isDisabled={isLoadingQuery || query === ""}
+            >
+              Run Query
+            </Button>
+          </VStack>
+        </FloatingBox>
+        <FloatingBox
+          responsivePadding={responsivePadding}
+          bgColor={bgColor}
+          borderColor={borderColor}
+          shadowColor={shadowColor}
           minHeight="150px"
           overflowY="auto"
-          bg="white"
         >
           {retrievalResult ? (
             <ReactMarkdown className={styles["markdown-content"]}>
@@ -90,7 +135,7 @@ const TestQuery = ({ tenantId }) => {
           ) : (
             <Box color="gray.500">Retrieval results will appear here</Box>
           )}
-        </Box>
+        </FloatingBox>
       </VStack>
     </Box>
   );
