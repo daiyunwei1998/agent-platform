@@ -168,6 +168,42 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     }
   };
 
+  const pickUpCustomer = (customer) => {
+      const pickUpInfo = {
+        agent: userId,
+        customer: customer,
+        type: "pickup",
+        tenant_id: tenantId,
+        timestamp: new Date().toISOString(),
+        
+      };
+
+      clientRef.current.publish({
+        destination: "/app/chat.pickUp",
+        body: JSON.stringify(pickUpInfo),
+      });
+
+      console.log("picking up customer:", pickUpInfo);
+  };
+
+  const dropCustomer = (customer) => {
+      const dropInfo = {
+        agent: userId,
+        customer: selectedCustomer,
+        type: "drop",
+        tenant_id: tenantId,
+        timestamp: new Date().toISOString(),
+      };
+
+      clientRef.current.publish({
+        destination: "/app/chat.pickUp",
+        body: JSON.stringify(dropInfo),
+      });
+
+      console.log("Dropping customer:", dropInfo);
+    
+  };
+
   const loadOfflineMessages = async (customerId) => {
     try {
       const response = await axios.get(
@@ -197,6 +233,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                 active={customerId === selectedCustomer}
                 onClick={() => {
                   setSelectedCustomer(customerId);
+                  pickUpCustomer(selectedCustomer);
                   //loadOfflineMessages(customerId);
                   acknowledgeMessage(customerId);
                 }}
