@@ -60,6 +60,7 @@ const FloatingBox = ({
 );
 
 const ViewKnowledgeBase = ({ tenantId }) => {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [docNames, setDocNames] = useState([]);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [docEntries, setDocEntries] = useState([]);
@@ -69,6 +70,7 @@ const ViewKnowledgeBase = ({ tenantId }) => {
   const [editedContent, setEditedContent] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
   
   const {
     isOpen: isEditModalOpen,
@@ -199,6 +201,12 @@ const ViewKnowledgeBase = ({ tenantId }) => {
     }
   };
 
+  const deleteDocument = async (docName) => {
+    setDocNames(prevDocNames => prevDocNames.filter(name => name !== docName));
+    setSelectedDoc(null);
+    setDocEntries([]);
+  };
+
   const deleteEntry = async () => {
     if (!entryToDelete) return;
     setIsDeleting(true);
@@ -220,9 +228,16 @@ const ViewKnowledgeBase = ({ tenantId }) => {
         duration: 5000,
         isClosable: true,
       });
-      setDocEntries((prevEntries) =>
-        prevEntries.filter((entry) => entry.id !== entryToDelete.id)
+
+      const updatedEntries = docEntries.filter(
+        (entry) => entry.id !== entryToDelete.id
       );
+      setDocEntries(updatedEntries);
+
+       if (updatedEntries.length === 0) {
+        await deleteDocument(selectedDoc);
+      }
+
     } catch (error) {
       console.error("Error deleting entry:", error);
       toast({
