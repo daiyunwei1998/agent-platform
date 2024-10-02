@@ -117,6 +117,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       console.log("Reconnecting...");
       connect();
     }
+  }
 
   const onNewCustomerReceived = (payload) => {
     const message = JSON.parse(payload.body);
