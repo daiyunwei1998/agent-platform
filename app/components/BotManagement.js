@@ -25,45 +25,92 @@ import BillingPage from "./BillingPage";
 const BotManagement = ({ tenantId }) => {
   const [activeSection, setActiveSection] = useState("knowledge");
   const [pendingTasks, setPendingTasks] = useState([]);
+  const [refreshKnowledgeBase, setRefreshKnowledgeBase] = useState(0);
   const clientRef = useRef(null);
   const toast = useToast();
+   
 
   const connect = () => {
-    clientRef.current = new Client({
-      webSocketFactory: () => new SockJS(`${chatServiceHost}/ws`),
+    if (clientRef.current && clientRef.current.connected) {
+      console.log("WebSocket client is already connected.");
+      return;
+    }
+
+    console.log(`Connecting WebSocket for Tenant ID: ${tenantId}`);
+
+    const socketUrl = chatServiceHost + `/ws`;
+    const socket = new SockJS(socketUrl);
+    const client = new Client({
+      webSocketFactory: () => socket,
+      reconnectDelay: 5000,
       onConnect: () => {
-        console.log("Connected to WebSocket");
-        clientRef.current.subscribe(`/topic/tenant.${tenantId}`, onMessageReceived);
+        client.subscribe(
+          `/queue/${tenantId}.task_complete`,
+          onMessageReceived,
+          {
+            ack: "client-individual",
+          }
+        );
+        console.log("Connected to WebSocket channel.");
       },
       onStompError: (frame) => {
-        console.error('Broker reported error: ' + frame.headers['message']);
-        console.error('Additional details: ' + frame.body);
+        console.error("Broker reported error: " + frame.headers["message"]);
+        console.error("Additional details: " + frame.body);
+      },
+      debug: (str) => {
+        console.log(str);
       },
     });
 
-    clientRef.current.activate();
+    client.activate();
+    clientRef.current = client;
   };
 
   const disconnect = () => {
     if (clientRef.current) {
       clientRef.current.deactivate();
+      clientRef.current = null;
+      console.log("Disconnected from WebSocket.");
     }
   };
 
   const onMessageReceived = (payload) => {
     const message = JSON.parse(payload.body);
-    console.log("Received message:", message);
-    if (message.type === 'TASK_COMPLETED') {
+    console.log("Received worker message:", message);
+
+    const filename = message.file;
+
+    setPendingTasks((prevTasks) => {
+      const newTasks = prevTasks.filter((name) => name !== filename);
+
+      if (newTasks.length === 0) {
+        disconnect();
+      }
+
+      return newTasks;
+    });
+    if (message.status == "success") {
       toast({
-        title: "Task Completed",
-        description: `Task ${message.taskId} has been completed.`,
+        title: "Task Complete",
+        description: `The task with filename ${filename} has been completed.`,
         status: "success",
         duration: 5000,
         isClosable: true,
       });
-      setPendingTasks((prevTasks) => prevTasks.filter((task) => task.id !== message.taskId));
+      setRefreshKnowledgeBase((prev) => prev + 1);
+    } else {
+      console.log(message.error);
+      toast({
+        title: "Task Failed",
+        description: message.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
+    payload.ack();
   };
+
 
   useEffect(() => {
     return () => {
