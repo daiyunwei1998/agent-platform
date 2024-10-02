@@ -192,7 +192,7 @@ const BotManagement = ({ tenantId }) => {
                     connect={connect}
                     clientRef={clientRef}
                   />
-                  <ViewKnowledgeBase tenantId={tenantId} />
+                  <ViewKnowledgeBase tenantId={tenantId} refreshTrigger={refreshKnowledgeBase}  />
                 </>
               )}
 

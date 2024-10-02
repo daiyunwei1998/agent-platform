@@ -59,8 +59,7 @@ const FloatingBox = ({
   </Box>
 );
 
-const ViewKnowledgeBase = ({ tenantId }) => {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+const ViewKnowledgeBase = ({ tenantId, refreshTrigger }) => {
   const [docNames, setDocNames] = useState([]);
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [docEntries, setDocEntries] = useState([]);
@@ -256,7 +255,7 @@ const ViewKnowledgeBase = ({ tenantId }) => {
 
   useEffect(() => {
     fetchDocNames();
-  }, []);
+  }, [refreshTrigger]);
 
   const responsiveSpacing = useBreakpointValue({ base: 4, md: 6, lg: 8 });
   const responsivePadding = useBreakpointValue({ base: 4, md: 6, lg: 8 });
