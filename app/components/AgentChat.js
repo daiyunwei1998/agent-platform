@@ -232,8 +232,9 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                 info={waitingCustomers.includes(customerId) ? "Waiting" : ""}
                 active={customerId === selectedCustomer}
                 onClick={() => {
+                  dropCustomer(selectedCustomer)
                   setSelectedCustomer(customerId);
-                  pickUpCustomer(selectedCustomer);
+                  pickUpCustomer(customerId);
                   //loadOfflineMessages(customerId);
                   acknowledgeMessage(customerId);
                 }}
