@@ -127,7 +127,7 @@ export default function LoginPage() {
         })
 
         // Redirect to domain
-        window.location.href = '/'
+        window.location.href = '/admin/bot-management'
       } else {
         // Log the response status for debugging
         console.log('Response Status:', response.status)
