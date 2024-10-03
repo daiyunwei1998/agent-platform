@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import React, { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
@@ -15,7 +15,7 @@ import {
   Avatar
 } from "@chatscope/chat-ui-kit-react";
 import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
-import { chatServiceHost, tenantServiceHost, imageHost} from '@/app/config';
+import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config';
 
 const AgentChat = ({ tenantId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
@@ -26,12 +26,19 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   const [isConnected, setIsConnected] = useState(false);
   const clientRef = useRef(null);
   const messageRefs = useRef({});
+  
+  // Ref to keep track of the latest selectedCustomer
+  const selectedCustomerRef = useRef(null);
 
   useEffect(() => {
     connect();
     fetchLogo();
     return () => {
-      
+      // Call dropCustomer on the currently selected customer before disconnecting
+      if (selectedCustomerRef.current) {
+        dropCustomer(selectedCustomerRef.current);
+      }
+
       if (clientRef.current) {    
         // Deactivate the WebSocket connection
         clientRef.current.deactivate();
@@ -93,11 +100,6 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         console.error("Broker reported error: " + frame.headers["message"]);
         console.error("Additional details: " + frame.body);
       },
-      // onDisconnect: () => {
-      //   console.warn("WebSocket disconnected. Attempting to reconnect...");
-      //   setIsConnected(false);
-      //   reconnect(); // Attempt reconnection
-      // },
       debug: (str) => {
         console.log(str);
       },
@@ -106,13 +108,6 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     client.activate();
     clientRef.current = client;
   };
-
-  const reconnect = () => {
-    if (!isConnected) {
-      console.log("Reconnecting...");
-      connect();
-    }
-  }
 
   const onNewCustomerReceived = (payload) => {
     const message = JSON.parse(payload.body);
@@ -183,38 +178,43 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   };
 
   const pickUpCustomer = (customer) => {
-      const pickUpInfo = {
-        agent: userId,
-        customer: customer,
-        type: "pickup",
-        tenant_id: tenantId,
-        timestamp: new Date().toISOString(),
-        
-      };
+    const pickUpInfo = {
+      agent: userId,
+      customer: customer,
+      type: "pickup",
+      tenant_id: tenantId,
+      timestamp: new Date().toISOString(),
+      
+    };
 
-      clientRef.current.publish({
-        destination: "/app/chat.pickUp",
-        body: JSON.stringify(pickUpInfo),
-      });
+    clientRef.current.publish({
+      destination: "/app/chat.pickUp",
+      body: JSON.stringify(pickUpInfo),
+    });
 
-      console.log("picking up customer:", pickUpInfo);
+    console.log("picking up customer:", pickUpInfo);
   };
 
   const dropCustomer = (customer) => {
-      const dropInfo = {
-        agent: userId,
-        customer: selectedCustomer,
-        type: "drop",
-        tenant_id: tenantId,
-        timestamp: new Date().toISOString(),
-      };
+    if (!clientRef.current || !customer) {
+      console.warn("Cannot drop customer: WebSocket not connected or customer is null");
+      return;
+    }
 
-      clientRef.current.publish({
-        destination: "/app/chat.pickUp",
-        body: JSON.stringify(dropInfo),
-      });
+    const dropInfo = {
+      agent: userId,
+      customer: customer,
+      type: "drop",
+      tenant_id: tenantId,
+      timestamp: new Date().toISOString(),
+    };
 
-      console.log("Dropping customer:", dropInfo);
+    clientRef.current.publish({
+      destination: "/app/chat.pickUp",
+      body: JSON.stringify(dropInfo),
+    });
+
+    console.log("Dropping customer:", dropInfo);
     
   };
 
@@ -246,8 +246,13 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                 info={waitingCustomers.includes(customerId) ? "Waiting" : ""}
                 active={customerId === selectedCustomer}
                 onClick={() => {
-                  dropCustomer(selectedCustomer)
+                  // Drop the currently selected customer before switching
+                  if (selectedCustomerRef.current) {
+                    dropCustomer(selectedCustomerRef.current);
+                  }
+
                   setSelectedCustomer(customerId);
+                  selectedCustomerRef.current = customerId; // Update the ref
                   pickUpCustomer(customerId);
                   //loadOfflineMessages(customerId);
                   acknowledgeMessage(customerId);
