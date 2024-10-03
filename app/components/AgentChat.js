@@ -32,17 +32,12 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     fetchLogo();
     return () => {
       
-      if (clientRef.current) {
-        // Drop the selected customer if there is one
-        if (selectedCustomer) {
-          dropCustomer(selectedCustomer);
-        }
-  
+      if (clientRef.current) {    
         // Deactivate the WebSocket connection
         clientRef.current.deactivate();
       }
     };
-  }, [selectedCustomer]);
+  }, []);
 
   const fetchLogo = async () => {
     try {
@@ -98,11 +93,11 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         console.error("Broker reported error: " + frame.headers["message"]);
         console.error("Additional details: " + frame.body);
       },
-      onDisconnect: () => {
-        console.warn("WebSocket disconnected. Attempting to reconnect...");
-        setIsConnected(false);
-        reconnect(); // Attempt reconnection
-      },
+      // onDisconnect: () => {
+      //   console.warn("WebSocket disconnected. Attempting to reconnect...");
+      //   setIsConnected(false);
+      //   reconnect(); // Attempt reconnection
+      // },
       debug: (str) => {
         console.log(str);
       },
