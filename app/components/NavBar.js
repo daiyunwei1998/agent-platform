@@ -85,7 +85,7 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
 
         {/* Navigation Items */}
         <Flex gap={4}>
-          {navItems.map((item) => (
+          {pathname !== '/' && navItems.map((item) => (
             <Button
               key={item.name}
               onClick={() => router.push(item.href)}
