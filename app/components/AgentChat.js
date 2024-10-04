@@ -51,7 +51,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   // Function to fetch the connected users
   const fetchConnectedUsers = async () => {
     try {
-      const response = await axios.get(`${chatServiceHost}/api/v1/tenants/${tenantId}/users/`);
+      const response = await axios.get(`${chatServiceHost}/api/v1/tenants/${tenantId}/users/active`);
       if (response.data && response.data.data) {
         const users = response.data.data; // Expecting an array of { user_id, user_name }
         setAssignedCustomers(users); // Update assignedCustomers with user objects
