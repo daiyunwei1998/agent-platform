@@ -328,11 +328,14 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         <ChatContainer>
           <MessageList>
             {messages
-              .filter(
-                (msg) =>
-                  msg.type === "CHAT" &&
-                  ((msg.sender === selectedCustomer) ||
-                  (msg.sender === userId && msg.receiver === selectedCustomer))
+               .filter((msg) => 
+                (msg.type === "CHAT" &&
+                  (
+                    msg.sender === selectedCustomer ||
+                    (msg.sender === userId && msg.receiver === selectedCustomer)
+                  )
+                ) ||
+                (msg.type === "SUMMARY" && msg.receiver === selectedCustomer)
               )
               .map((msg, idx) => (
                 <Message
