@@ -51,7 +51,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   // Function to fetch the connected users
   const fetchConnectedUsers = async () => {
     try {
-      const response = await axios.get(`http://flashresponse.net/chat/api/v1/tenants/${tenantId}/users/`);
+      const response = await axios.get(`${chatServiceHost}/api/v1/tenants/${tenantId}/users/`);
       if (response.data && response.data.data) {
         const users = response.data.data; // Expecting an array of { user_id, user_name }
         setAssignedCustomers(users); // Update assignedCustomers with user objects
@@ -240,7 +240,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   const loadOfflineMessages = async (customerId) => {
     try {
       const response = await axios.get(
-        `http://localhost:8080/api/chats/${tenantId}/${customerId}`
+        `${chatServiceHost}/api/chats/${tenantId}/${customerId}`
       );
       setMessages(response.data.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp).toISOString() })));
     } catch (error) {
