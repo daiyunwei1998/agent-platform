@@ -223,12 +223,33 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       body: JSON.stringify(pickUpInfo),
     };
 
+    const pickUpNotification = {
+      sender: userId,
+      sender_name: userName,
+      content: `客服 ${userName} 正在為您服務`,
+      type: "CHAT",
+      tenant_id: tenantId,
+      receiver: customer,
+      user_type: "agent",
+      timestamp: new Date().toISOString(),
+    };
+
+
+    const pickUpNotificationPayload = {
+      destination: "/app/chat.sendMessage",
+      body: JSON.stringify(pickUpNotification),
+    };
+
+
+
     if (isConnected && clientRef.current && clientRef.current.active) {
       clientRef.current.publish(publishPayload);
+      clientRef.current.publish(pickUpNotificationPayload);
       console.log("Picking up customer immediately:", pickUpInfo);
     } else {
       // Enqueue the message to be sent once connected
       messageQueueRef.current.push(publishPayload);
+      messageQueueRef.current.push(pickUpNotificationPayload);
       console.log("Queued pickup message (waiting for connection):", pickUpInfo);
     }
   };
