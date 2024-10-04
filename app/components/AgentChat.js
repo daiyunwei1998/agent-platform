@@ -21,7 +21,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [assignedCustomers, setAssignedCustomers] = useState([]);
+  const [assignedCustomers, setAssignedCustomers] = useState([]); // Changed to store user objects
   const [waitingCustomers, setWaitingCustomers] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const clientRef = useRef(null);
@@ -33,6 +33,8 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   useEffect(() => {
     connect();
     fetchLogo();
+    fetchConnectedUsers(); // Fetch connected users on initial render
+
     return () => {
       // Call dropCustomer on the currently selected customer before disconnecting
       if (selectedCustomerRef.current) {
@@ -45,6 +47,21 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       }
     };
   }, []);
+
+  // Function to fetch the connected users
+  const fetchConnectedUsers = async () => {
+    try {
+      const response = await axios.get(`http://flashresponse.net/chat/api/v1/tenants/${tenantId}/users/`);
+      if (response.data && response.data.data) {
+        const users = response.data.data; // Expecting an array of { user_id, user_name }
+        setAssignedCustomers(users); // Update assignedCustomers with user objects
+      } else {
+        console.error("Invalid response format:", response);
+      }
+    } catch (error) {
+      console.error("Error fetching connected users:", error);
+    }
+  };
 
   const fetchLogo = async () => {
     try {
@@ -113,8 +130,10 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     const message = JSON.parse(payload.body);
     console.log("Received new customer join message:", message);
 
-    if (message.sender && !assignedCustomers.includes(message.sender)) {
-      setAssignedCustomers((prevCustomers) => [...prevCustomers, message.sender]);
+    if (message.sender && !assignedCustomers.find(user => user.user_id === message.sender)) {
+      // Assuming message.sender is user_id and you might need user_name
+      // If user_name is not provided, you might need to fetch it separately
+      setAssignedCustomers((prevCustomers) => [...prevCustomers, { user_id: message.sender, user_name: message.sender }]);
     }
 
     setMessages((prevMessages) => [...prevMessages, { ...message, timestamp: new Date().toISOString() }]);
@@ -239,26 +258,30 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       <MainContainer>
         <Sidebar position="left" scrollable={false}>
           <ConversationList>
-            {assignedCustomers.map((customerId) => (
+            {assignedCustomers.map((user) => (
               <Conversation
-                key={customerId}
-                name={customerId}
-                info={waitingCustomers.includes(customerId) ? "Waiting" : ""}
-                active={customerId === selectedCustomer}
+                key={user.user_id}
+                name={user.user_name}
+                info={waitingCustomers.includes(user.user_id) ? "Waiting" : ""}
+                active={user.user_id === selectedCustomer}
                 onClick={() => {
                   // Drop the currently selected customer before switching
                   if (selectedCustomerRef.current) {
                     dropCustomer(selectedCustomerRef.current);
                   }
 
-                  setSelectedCustomer(customerId);
-                  selectedCustomerRef.current = customerId; // Update the ref
-                  pickUpCustomer(customerId);
-                  //loadOfflineMessages(customerId);
-                  acknowledgeMessage(customerId);
+                  setSelectedCustomer(user.user_id);
+                  selectedCustomerRef.current = user.user_id; // Update the ref
+                  pickUpCustomer(user.user_id);
+                  //loadOfflineMessages(user.user_id);
+                  acknowledgeMessage(user.user_id);
                 }}
               >
-                <Avatar src={`${imageHost}/tenant_logos/user.png`} name={customerId} status={waitingCustomers.includes(customerId) ? "available" : "dnd"} />
+                <Avatar 
+                  src={`${imageHost}/tenant_logos/user.png`} 
+                  name={user.user_name} 
+                  status={waitingCustomers.includes(user.user_id) ? "available" : "dnd"} 
+                />
               </Conversation>
             ))}
           </ConversationList>
