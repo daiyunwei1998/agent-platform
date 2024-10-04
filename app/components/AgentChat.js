@@ -29,6 +29,9 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   
   // Ref to keep track of the latest selectedCustomer
   const selectedCustomerRef = useRef(null);
+  
+  // Initialize the message queue
+  const messageQueueRef = useRef([]);
 
   useEffect(() => {
     connect();
@@ -112,6 +115,16 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         });
 
         setIsConnected(true);
+
+        // Process any queued messages
+        if (messageQueueRef.current.length > 0) {
+          console.log("Sending queued messages:", messageQueueRef.current);
+          messageQueueRef.current.forEach((queuedMessage) => {
+            client.publish(queuedMessage);
+          });
+          // Clear the queue after sending
+          messageQueueRef.current = [];
+        }
       },
       onStompError: (frame) => {
         console.error("Broker reported error: " + frame.headers["message"]);
@@ -203,15 +216,21 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       type: "pickup",
       tenant_id: tenantId,
       timestamp: new Date().toISOString(),
-      
     };
 
-    clientRef.current.publish({
+    const publishPayload = {
       destination: "/app/chat.pickUp",
       body: JSON.stringify(pickUpInfo),
-    });
+    };
 
-    console.log("picking up customer:", pickUpInfo);
+    if (isConnected && clientRef.current && clientRef.current.active) {
+      clientRef.current.publish(publishPayload);
+      console.log("Picking up customer immediately:", pickUpInfo);
+    } else {
+      // Enqueue the message to be sent once connected
+      messageQueueRef.current.push(publishPayload);
+      console.log("Queued pickup message (waiting for connection):", pickUpInfo);
+    }
   };
 
   const dropCustomer = (customer) => {
@@ -234,7 +253,6 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     });
 
     console.log("Dropping customer:", dropInfo);
-    
   };
 
   const loadOfflineMessages = async (customerId) => {
