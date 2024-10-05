@@ -374,7 +374,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   };
 
   return (
-    <Flex height="100vh" direction="row">
+    <Flex height="calc(100vh - 72px)" direction="row">
       {/* Sidebar */}
       <Box
         width="250px"
