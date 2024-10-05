@@ -192,7 +192,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     ) {
       setAssignedCustomers((prev) => [
         ...prev,
-        { user_id: message.sender, user_name: message.sender },
+        { user_id: message.sender, user_name: message.sender_name },
       ]);
     }
 
