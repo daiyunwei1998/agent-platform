@@ -4,75 +4,96 @@ import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 import axios from "axios";
 import {
-  MainContainer,
-  ChatContainer,
-  MessageList,
-  Message,
-  MessageInput,
-  Sidebar,
-  ConversationList,
-  Conversation,
-  Avatar
-} from "@chatscope/chat-ui-kit-react";
-import "@chatscope/chat-ui-kit-styles/dist/default/styles.min.css";
-import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config';
+  Box,
+  Flex,
+  Text,
+  Input,
+  Button,
+  Spinner,
+  Alert,
+  AlertIcon,
+  Avatar,
+  VStack,
+  HStack,
+  Divider,
+  useToast,
+  IconButton,
+} from "@chakra-ui/react";
+import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost} from "@/app/config";
+import { CloseIcon } from "@chakra-ui/icons";
 
 const AgentChat = ({ tenantId, userId, userName }) => {
+  // State Variables
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [assignedCustomers, setAssignedCustomers] = useState([]); // Changed to store user objects
+  const [assignedCustomers, setAssignedCustomers] = useState([]);
   const [waitingCustomers, setWaitingCustomers] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [summaryError, setSummaryError] = useState(null);
+
   const clientRef = useRef(null);
   const messageRefs = useRef({});
-  
-  // Ref to keep track of the latest selectedCustomer
   const selectedCustomerRef = useRef(null);
-  
-  // Initialize the message queue
   const messageQueueRef = useRef([]);
 
+  const toast = useToast();
+
+  // Fetch connected users and tenant logo on mount
   useEffect(() => {
-    connect();
+    connectWebSocket();
     fetchLogo();
-    fetchConnectedUsers(); // Fetch connected users on initial render
+    fetchConnectedUsers();
 
     return () => {
-      // Call dropCustomer on the currently selected customer before disconnecting
       if (selectedCustomerRef.current) {
         dropCustomer(selectedCustomerRef.current);
       }
 
-      if (clientRef.current) {    
-        // Deactivate the WebSocket connection
+      if (clientRef.current) {
         clientRef.current.deactivate();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Function to fetch the connected users
+  // Function to fetch connected users
   const fetchConnectedUsers = async () => {
     try {
-      const response = await axios.get(`${chatServiceHost}/api/v1/tenants/${tenantId}/users/active`);
+      const response = await axios.get(
+        `${chatServiceHost}/api/v1/tenants/${tenantId}/users/active`
+      );
       if (response.data && response.data.data) {
-        const users = response.data.data; // Expecting an array of { user_id, user_name }
-        setAssignedCustomers(users); // Update assignedCustomers with user objects
+        const users = response.data.data; // Expecting [{ user_id, user_name }, ...]
+        setAssignedCustomers(users);
       } else {
         console.error("Invalid response format:", response);
       }
     } catch (error) {
       console.error("Error fetching connected users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch connected users.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
+  // Function to fetch tenant logo
   const fetchLogo = async () => {
     try {
       const params = new URLSearchParams();
-      params.append('tenant_id', tenantId);
-  
-      const response = await fetch(`${tenantServiceHost}/api/v1/tenants/find?${params.toString()}`, {});
-      
+      params.append("tenant_id", tenantId);
+
+      const response = await fetch(
+        `${tenantServiceHost}/api/v1/tenants/find?${params.toString()}`,
+        {}
+      );
+
       if (response.ok) {
         const data = await response.json();
         if (data.logo) {
@@ -86,23 +107,36 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     }
   };
 
+  // WebSocket Connection
+  const connectWebSocket = () => {
+    console.log(
+      `Connecting with Tenant ID: ${tenantId}, User ID: ${userId}, Username: ${userName}`
+    );
 
-  const connect = () => {
-    console.log(`Connect with credential: Tenant ID: ${tenantId}, User ID: ${userId}, Username: ${userName}`);
-
-    const socketUrl = chatServiceHost + `/ws`;
+    const socketUrl = `${chatServiceHost}/ws`;
     const socket = new SockJS(socketUrl);
 
     const client = new Client({
       webSocketFactory: () => socket,
       reconnectDelay: 5000,
       onConnect: () => {
-        console.log("Connected");
+        console.log("WebSocket Connected");
 
-        client.subscribe(`/topic/${tenantId}.new_customer`, onNewCustomerReceived);
-        client.subscribe(`/topic/${tenantId}.customer_message`, onMessageReceived);
-        client.subscribe(`/topic/${tenantId}.customer_waiting`, onCustomerWaitingReceived, { ack: 'client-individual' });
+        client.subscribe(
+          `/topic/${tenantId}.new_customer`,
+          onNewCustomerReceived
+        );
+        client.subscribe(
+          `/topic/${tenantId}.customer_message`,
+          onMessageReceived
+        );
+        client.subscribe(
+          `/topic/${tenantId}.customer_waiting`,
+          onCustomerWaitingReceived,
+          { ack: "client-individual" }
+        );
 
+        // Notify server of user joining
         client.publish({
           destination: "/app/chat.addUser",
           body: JSON.stringify({
@@ -118,17 +152,22 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
         // Process any queued messages
         if (messageQueueRef.current.length > 0) {
-          console.log("Sending queued messages:", messageQueueRef.current);
           messageQueueRef.current.forEach((queuedMessage) => {
             client.publish(queuedMessage);
           });
-          // Clear the queue after sending
           messageQueueRef.current = [];
         }
       },
       onStompError: (frame) => {
         console.error("Broker reported error: " + frame.headers["message"]);
         console.error("Additional details: " + frame.body);
+        toast({
+          title: "WebSocket Error",
+          description: frame.headers["message"],
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
       },
       debug: (str) => {
         console.log(str);
@@ -139,34 +178,48 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     clientRef.current = client;
   };
 
+  // Handlers for incoming messages
   const onNewCustomerReceived = (payload) => {
     const message = JSON.parse(payload.body);
-    console.log("Received new customer join message:", message);
+    console.log("New Customer:", message);
 
-    if (message.sender && !assignedCustomers.find(user => user.user_id === message.sender)) {
-      // Assuming message.sender is user_id and you might need user_name
-      // If user_name is not provided, you might need to fetch it separately
-      setAssignedCustomers((prevCustomers) => [...prevCustomers, { user_id: message.sender, user_name: message.sender }]);
+    if (
+      message.sender &&
+      !assignedCustomers.find((user) => user.user_id === message.sender)
+    ) {
+      setAssignedCustomers((prev) => [
+        ...prev,
+        { user_id: message.sender, user_name: message.sender },
+      ]);
     }
 
-    setMessages((prevMessages) => [...prevMessages, { ...message, timestamp: new Date().toISOString() }]);
+    setMessages((prev) => [
+      ...prev,
+      { ...message, timestamp: new Date().toISOString() },
+    ]);
   };
 
   const onMessageReceived = (payload) => {
     const message = JSON.parse(payload.body);
-    console.log("Received chat message:", message);
+    console.log("Chat Message:", message);
 
-    setMessages((prevMessages) => [...prevMessages, { ...message, timestamp: new Date().toISOString() }]);
+    setMessages((prev) => [
+      ...prev,
+      { ...message, timestamp: new Date().toISOString() },
+    ]);
   };
 
   const onCustomerWaitingReceived = (payload) => {
     const message = JSON.parse(payload.body);
-    console.log("Received customer waiting message:", message);
+    console.log("Customer Waiting:", message);
 
     messageRefs.current[message.customer_id] = payload;
 
-    if (message.customer_id && !waitingCustomers.includes(message.customer_id)) {
-      setWaitingCustomers((prevCustomers) => [...prevCustomers, message.customer_id]);
+    if (
+      message.customer_id &&
+      !waitingCustomers.includes(message.customer_id)
+    ) {
+      setWaitingCustomers((prev) => [...prev, message.customer_id]);
     }
   };
 
@@ -178,14 +231,22 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         message.ack();
         console.log(`Acknowledged message for customer: ${customerId}`);
       } catch (error) {
-        console.error(`Failed to acknowledge message for customer: ${customerId}`, error);
+        console.error(
+          `Failed to acknowledge message for customer: ${customerId}`,
+          error
+        );
       }
       delete messageRefs.current[customerId];
     }
   };
 
+  // Function to send a chat message
   const sendMessage = () => {
-    if (messageInput.trim() !== "" && clientRef.current && selectedCustomer) {
+    if (
+      messageInput.trim() !== "" &&
+      clientRef.current &&
+      selectedCustomer
+    ) {
       const chatMessage = {
         sender: userId,
         content: messageInput,
@@ -196,19 +257,49 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         timestamp: new Date().toISOString(),
       };
 
-      setMessages((prevMessages) => [...prevMessages, chatMessage]);
+      setMessages((prev) => [...prev, chatMessage]);
 
       clientRef.current.publish({
         destination: "/app/chat.sendMessage",
         body: JSON.stringify(chatMessage),
       });
 
-      console.log("sending messages:", chatMessage);
+      console.log("Sent message:", chatMessage);
 
       setMessageInput("");
     }
   };
 
+  // Function to fetch summary
+  const fetchSummary = async (customerId) => {
+    setIsLoadingSummary(true);
+    setSummaryError(null);
+    setSummary(null);
+
+    try {
+      const response = await axios.post(`${aiServiceHost}/summary`, {
+        tenantid: tenantId,
+        customer_id: customerId,
+      });
+
+      const summaryText = response.data.summary;
+      setSummary(summaryText);
+    } catch (error) {
+      console.error("Error fetching summary:", error);
+      setSummaryError("Failed to load summary.");
+      toast({
+        title: "Error",
+        description: "Failed to fetch customer summary.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
+  // Function to pick up a customer
   const pickUpCustomer = (customer) => {
     const pickUpInfo = {
       agent: userId,
@@ -234,26 +325,26 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       timestamp: new Date().toISOString(),
     };
 
-
     const pickUpNotificationPayload = {
       destination: "/app/chat.sendMessage",
       body: JSON.stringify(pickUpNotification),
     };
 
-
-
     if (isConnected && clientRef.current && clientRef.current.active) {
       clientRef.current.publish(publishPayload);
       clientRef.current.publish(pickUpNotificationPayload);
-      console.log("Picking up customer immediately:", pickUpInfo);
+      console.log("Picked up customer:", pickUpInfo);
     } else {
-      // Enqueue the message to be sent once connected
       messageQueueRef.current.push(publishPayload);
       messageQueueRef.current.push(pickUpNotificationPayload);
-      console.log("Queued pickup message (waiting for connection):", pickUpInfo);
+      console.log("Queued pickup message:", pickUpInfo);
     }
+
+    // Fetch summary after picking up
+    fetchSummary(customer);
   };
 
+  // Function to drop a customer
   const dropCustomer = (customer) => {
     if (!clientRef.current || !customer) {
       console.warn("Cannot drop customer: WebSocket not connected or customer is null");
@@ -273,101 +364,220 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       body: JSON.stringify(dropInfo),
     });
 
-    console.log("Dropping customer:", dropInfo);
+    console.log("Dropped customer:", dropInfo);
   };
 
-  const loadOfflineMessages = async (customerId) => {
-    try {
-      const response = await axios.get(
-        `${chatServiceHost}/api/chats/${tenantId}/${customerId}`
-      );
-      setMessages(response.data.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp).toISOString() })));
-    } catch (error) {
-      console.error("Error loading offline messages:", error);
-    }
-  };
-
+  // Function to format timestamp
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
   return (
-    <div style={{ height: "calc(100vh - 72px)" }}>
-      <MainContainer>
-        <Sidebar position="left" scrollable={false}>
-          <ConversationList>
-            {assignedCustomers.map((user) => (
-              <Conversation
-                key={user.user_id}
-                name={user.user_name}
-                info={waitingCustomers.includes(user.user_id) ? "Waiting" : ""}
-                active={user.user_id === selectedCustomer}
-                onClick={() => {
-                  // Drop the currently selected customer before switching
-                  if (selectedCustomerRef.current) {
-                    dropCustomer(selectedCustomerRef.current);
-                  }
+    <Flex height="100vh" direction="row">
+      {/* Sidebar */}
+      <Box
+        width="250px"
+        bg="gray.100"
+        p={4}
+        borderRight="1px"
+        borderColor="gray.200"
+        overflowY="auto"
+      >
+        <Text fontSize="xl" mb={4}>
+          Connected Customers
+        </Text>
+        <VStack spacing={4} align="stretch">
+          {assignedCustomers.map((user) => (
+            <HStack
+              key={user.user_id}
+              p={2}
+              bg={
+                user.user_id === selectedCustomer
+                  ? "blue.100"
+                  : "transparent"
+              }
+              borderRadius="md"
+              cursor="pointer"
+              onClick={() => {
+                if (selectedCustomerRef.current) {
+                  dropCustomer(selectedCustomerRef.current);
+                }
 
-                  setSelectedCustomer(user.user_id);
-                  selectedCustomerRef.current = user.user_id; // Update the ref
-                  pickUpCustomer(user.user_id);
-                  //loadOfflineMessages(user.user_id);
-                  acknowledgeMessage(user.user_id);
-                }}
-              >
-                <Avatar 
-                  src={`${imageHost}/tenant_logos/user.png`} 
-                  name={user.user_name} 
-                  status={waitingCustomers.includes(user.user_id) ? "available" : "dnd"} 
+                setSelectedCustomer(user.user_id);
+                selectedCustomerRef.current = user.user_id;
+                pickUpCustomer(user.user_id);
+                acknowledgeMessage(user.user_id);
+              }}
+            >
+              <Avatar
+                size="sm"
+                src={`${imageHost}/tenant_logos/user.png`}
+                name={user.user_name}
+              />
+              <VStack align="start" spacing={0}>
+                <Text fontWeight="bold">{user.user_name}</Text>
+                {waitingCustomers.includes(user.user_id) && (
+                  <Text fontSize="sm" color="gray.500">
+                    Waiting
+                  </Text>
+                )}
+              </VStack>
+              {selectedCustomer === user.user_id && (
+                <IconButton
+                  icon={<CloseIcon />}
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dropCustomer(user.user_id);
+                    setSelectedCustomer(null);
+                    selectedCustomerRef.current = null;
+                  }}
                 />
-              </Conversation>
-            ))}
-          </ConversationList>
-        </Sidebar>
-        <ChatContainer>
-          <MessageList>
+              )}
+            </HStack>
+          ))}
+        </VStack>
+      </Box>
+
+      {/* Main Chat Area */}
+      <Flex flex="1" direction="column">
+        {/* Summary Section */}
+        <Box
+          bg="gray.50"
+          p={4}
+          borderBottom="1px"
+          borderColor="gray.200"
+        >
+          <Text fontSize="lg" fontWeight="bold" mb={2}>
+            Customer Summary
+          </Text>
+          {isLoadingSummary ? (
+            <Flex align="center">
+              <Spinner size="sm" mr={2} />
+              <Text>Loading summary...</Text>
+            </Flex>
+          ) : summaryError ? (
+            <Alert status="error">
+              <AlertIcon />
+              {summaryError}
+            </Alert>
+          ) : summary ? (
+            <Box
+              p={3}
+              bg="blue.50"
+              borderRadius="md"
+              border="1px"
+              borderColor="blue.200"
+            >
+              <Text>{summary}</Text>
+            </Box>
+          ) : (
+            <Text color="gray.500">No summary available.</Text>
+          )}
+        </Box>
+
+        {/* Messages */}
+        <Box
+          flex="1"
+          p={4}
+          overflowY="auto"
+          bg="white"
+        >
+          <VStack spacing={4} align="stretch">
             {messages
-               .filter((msg) => 
-                (msg.type === "CHAT" &&
-                  (
-                    msg.sender === selectedCustomer ||
-                    (msg.sender === userId && msg.receiver === selectedCustomer)
-                  )
-                ) ||
-                (msg.type === "SUMMARY" && msg.receiver === selectedCustomer)
+              .filter(
+                (msg) =>
+                  (msg.type === "CHAT" &&
+                    (msg.sender === selectedCustomer ||
+                      (msg.sender === userId &&
+                        msg.receiver === selectedCustomer))) ||
+                  msg.type === "SYSTEM"
               )
-              .map((msg, idx) => (
-                <Message
-                  key={idx}
-                  model={{
-                    message: msg.content,
-                    sentTime: formatTimestamp(msg.timestamp),
-                    sender: msg.sender === userId ? userName : msg.sender,
-                    direction: msg.sender === userId ? "outgoing" : "incoming",
-                    position: "normal",
-                  }}>
-                  <Message.Header sender={msg.sender === userId ? userName : msg.sender} sentTime={formatTimestamp(msg.timestamp)} />
-                  <Message.Footer>
-                    <small>{new Date(msg.timestamp).toLocaleTimeString()}</small>
-                  </Message.Footer>
-                  <Avatar
-                    src={msg.sender === userId ? `${imageHost}/tenant_logos/agent.png` : `${imageHost}/tenant_logos/user.png`}
-                    name={msg.sender === userId ? userName : msg.sender}
-                  />
-                </Message>
-              ))}
-          </MessageList>
-          <MessageInput
-            placeholder="Type message here"
-            value={messageInput}
-            onChange={(val) => setMessageInput(val)}
-            onSend={sendMessage}
-            attachButton={false}
-          />
-        </ChatContainer>
-      </MainContainer>
-    </div>
+              .map((msg, idx) => {
+                if (msg.type === "SYSTEM") {
+                  return (
+                    <Flex
+                      key={idx}
+                      justify="center"
+                      align="center"
+                      bg="yellow.100"
+                      p={2}
+                      borderRadius="md"
+                    >
+                      <Text fontSize="sm" color="yellow.800">
+                        {msg.content}
+                      </Text>
+                    </Flex>
+                  );
+                }
+
+                const isOutgoing = msg.sender === userId;
+                return (
+                  <Flex
+                    key={idx}
+                    align={isOutgoing ? "flex-end" : "flex-start"}
+                  >
+                    {!isOutgoing && (
+                      <Avatar
+                        size="sm"
+                        src={`${imageHost}/tenant_logos/user.png`}
+                        name={msg.sender}
+                        mr={2}
+                      />
+                    )}
+                    <Box
+                      bg={isOutgoing ? "blue.100" : "gray.100"}
+                      p={3}
+                      borderRadius="md"
+                      maxW="70%"
+                    >
+                      <Text>{msg.content}</Text>
+                      <Text fontSize="xs" color="gray.500" textAlign="right">
+                        {formatTimestamp(msg.timestamp)}
+                      </Text>
+                    </Box>
+                    {isOutgoing && (
+                      <Avatar
+                        size="sm"
+                        src={`${imageHost}/tenant_logos/agent.png`}
+                        name={userName}
+                        ml={2}
+                      />
+                    )}
+                  </Flex>
+                );
+              })}
+          </VStack>
+        </Box>
+
+        {/* Message Input */}
+        <Box p={4} bg="gray.50" borderTop="1px" borderColor="gray.200">
+          <Flex>
+            <Input
+              placeholder="Type your message..."
+              value={messageInput}
+              onChange={(e) => setMessageInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+            />
+            <Button
+              colorScheme="blue"
+              ml={2}
+              onClick={sendMessage}
+              isDisabled={!messageInput.trim()}
+            >
+              Send
+            </Button>
+          </Flex>
+        </Box>
+      </Flex>
+    </Flex>
   );
 };
 
