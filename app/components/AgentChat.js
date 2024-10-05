@@ -29,7 +29,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [assignedCustomers, setAssignedCustomers] = useState([]);
+  const [assignedCustomers, setAssignedCustomers] = useState(new Set());
   const [waitingCustomers, setWaitingCustomers] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [summary, setSummary] = useState(null);
@@ -69,7 +69,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         `${chatServiceHost}/api/v1/tenants/${tenantId}/users/active`
       );
       if (response.data && response.data.data) {
-        const users = response.data.data; // Expecting [{ user_id, user_name }, ...]
+        const users = new Set(response.data.data); // Expecting [{ user_id, user_name }, ...]
         setAssignedCustomers(users);
       } else {
         console.error("Invalid response format:", response);
@@ -188,12 +188,12 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
     if (
       message.sender &&
-      !assignedCustomers.find((user) => user.user_id === message.sender)
+      !assignedCustomers.find((user) => user.user_id == message.sender)
     ) {
-      setAssignedCustomers((prev) => [
+      setAssignedCustomers((prev) => {
         ...prev,
         { user_id: message.sender, user_name: message.sender_name },
-      ]);
+    });
     }
 
     setMessages((prev) => [
