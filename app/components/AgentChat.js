@@ -354,7 +354,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   // Function to load chat history
   const loadChatHistory = async (customerId) => {
     try {
-      const response = await axios.post(`${chatServiceHost}/history`, {
+      const response = await axios.post(`${chatServiceHost}/api/v1/chats/history`, {
         tenant_id: tenantId,
         customer_id: customerId,
       });
