@@ -356,7 +356,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     try {
       const response = await axios.post(`${chatServiceHost}/history`, {
         tenant_id: tenantId,
-        session_id: customerId, // Assuming session_id corresponds to customerId
+        customer_id: customerId,
       });
 
       if (response.data && Array.isArray(response.data)) {
