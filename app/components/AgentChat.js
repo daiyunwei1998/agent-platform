@@ -18,9 +18,11 @@ import {
   Divider,
   useToast,
   IconButton,
+  Collapse,
 } from "@chakra-ui/react";
-import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost} from "@/app/config";
-import { CloseIcon } from "@chakra-ui/icons";
+import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
+import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost } from "@/app/config";
+import { CloseIcon, ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons"; // Icons for dropdown
 
 const AgentChat = ({ tenantId, userId, userName }) => {
   // State Variables
@@ -33,6 +35,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   const [summary, setSummary] = useState(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
+  const [isSummaryVisible, setIsSummaryVisible] = useState(true); // Visibility state for summary dropdown
 
   const clientRef = useRef(null);
   const messageRefs = useRef({});
@@ -450,32 +453,42 @@ const AgentChat = ({ tenantId, userId, userName }) => {
           borderBottom="1px"
           borderColor="gray.200"
         >
-          <Text fontSize="lg" fontWeight="bold" mb={2}>
-            Customer Summary
-          </Text>
-          {isLoadingSummary ? (
-            <Flex align="center">
-              <Spinner size="sm" mr={2} />
-              <Text>Loading summary...</Text>
-            </Flex>
-          ) : summaryError ? (
-            <Alert status="error">
-              <AlertIcon />
-              {summaryError}
-            </Alert>
-          ) : summary ? (
-            <Box
-              p={3}
-              bg="blue.50"
-              borderRadius="md"
-              border="1px"
-              borderColor="blue.200"
-            >
-              <Text>{summary}</Text>
-            </Box>
-          ) : (
-            <Text color="gray.500">No summary available.</Text>
-          )}
+          <Flex alignItems="center" justifyContent="space-between">
+            <Text fontSize="lg" fontWeight="bold" mb={2}>
+              Customer Summary
+            </Text>
+            <IconButton
+              icon={isSummaryVisible ? <ChevronUpIcon /> : <ChevronDownIcon />}
+              size="sm"
+              onClick={() => setIsSummaryVisible(!isSummaryVisible)}
+            />
+          </Flex>
+          <Collapse in={isSummaryVisible} animateOpacity>
+            {isLoadingSummary ? (
+              <Flex align="center">
+                <Spinner size="sm" mr={2} />
+                <Text>Loading summary...</Text>
+              </Flex>
+            ) : summaryError ? (
+              <Alert status="error">
+                <AlertIcon />
+                {summaryError}
+              </Alert>
+            ) : summary ? (
+              <Box
+                p={3}
+                bg="blue.50"
+                borderRadius="md"
+                border="1px"
+                borderColor="blue.200"
+                pl={10}
+              >
+                <ReactMarkdown>{summary}</ReactMarkdown> {/* Markdown Rendering */}
+              </Box>
+            ) : (
+              <Text color="gray.500">No summary available.</Text>
+            )}
+          </Collapse>
         </Box>
 
         {/* Messages */}
