@@ -29,13 +29,14 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [assignedCustomers, setAssignedCustomers] = useState(new Set());
+  const [assignedCustomers, setAssignedCustomers] = useState([]);
   const [waitingCustomers, setWaitingCustomers] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
   const [summary, setSummary] = useState(null);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [summaryError, setSummaryError] = useState(null);
   const [isSummaryVisible, setIsSummaryVisible] = useState(true); // Visibility state for summary dropdown
+  const [logoUrl, setLogoUrl] = useState(null); // Added state for logo URL
 
   const clientRef = useRef(null);
   const messageRefs = useRef({});
@@ -69,7 +70,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         `${chatServiceHost}/api/v1/tenants/${tenantId}/users/active`
       );
       if (response.data && response.data.data) {
-        const users = new Set(response.data.data); // Expecting [{ user_id, user_name }, ...]
+        const users = response.data.data; // Expecting [{ user_id, user_name }, ...]
         setAssignedCustomers(users);
       } else {
         console.error("Invalid response format:", response);
@@ -188,17 +189,17 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
     if (
       message.sender &&
-      !assignedCustomers.find((user) => user.user_id == message.sender)
+      !assignedCustomers.find((user) => user.user_id === message.sender)
     ) {
-      setAssignedCustomers((prev) => {
+      setAssignedCustomers((prev) => [
         ...prev,
         { user_id: message.sender, user_name: message.sender_name },
-    });
+      ]);
     }
 
     setMessages((prev) => [
       ...prev,
-      { ...message, timestamp: new Date().toISOString() },
+      { ...message, timestamp: new Date().toISOString(), type: "SYSTEM" },
     ]);
   };
 
@@ -303,7 +304,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   };
 
   // Function to pick up a customer
-  const pickUpCustomer = (customer) => {
+  const pickUpCustomer = async (customer) => {
     const pickUpInfo = {
       agent: userId,
       customer: customer,
@@ -345,6 +346,46 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
     // Fetch summary after picking up
     fetchSummary(customer);
+
+    // Fetch chat history after picking up
+    await loadChatHistory(customer);
+  };
+
+  // Function to load chat history
+  const loadChatHistory = async (customerId) => {
+    try {
+      const response = await axios.post(`${chatServiceHost}/history`, {
+        tenant_id: tenantId,
+        session_id: customerId, // Assuming session_id corresponds to customerId
+      });
+
+      if (response.data && Array.isArray(response.data)) {
+        const historyMessages = response.data.map((msg) => ({
+          ...msg,
+          timestamp: msg.timestamp || new Date().toISOString(),
+        }));
+
+        // Merge history messages with current messages, ensuring no duplicates
+        setMessages((prev) => {
+          const existingMessageIds = new Set(prev.map((m) => m.id));
+          const newMessages = historyMessages.filter(
+            (m) => !existingMessageIds.has(m.id)
+          );
+          return [...newMessages, ...prev];
+        });
+      } else {
+        console.error("Invalid history response format:", response);
+      }
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch chat history.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
   // Function to drop a customer
@@ -536,7 +577,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                       <Avatar
                         size="sm"
                         src={`${imageHost}/tenant_logos/user.png`}
-                        name={msg.sender}
+                        name={msg.sender_name || msg.sender}
                         mr={2}
                       />
                     )}
