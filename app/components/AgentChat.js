@@ -278,7 +278,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
     try {
       const response = await axios.post(`${aiServiceHost}/summary`, {
-        tenantid: tenantId,
+        tenant_id: tenantId,
         customer_id: customerId,
       });
 
