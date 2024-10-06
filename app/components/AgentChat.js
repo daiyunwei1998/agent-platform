@@ -362,6 +362,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       if (response.data && Array.isArray(response.data)) {
         const historyMessages = response.data.map((msg) => ({
           ...msg,
+          type:"HISTORY",
           timestamp: msg.timestamp || new Date().toISOString(),
         }));
 
@@ -417,6 +418,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  console.log(messages)
   return (
     <Flex height="calc(100vh - 72px)" direction="row">
       {/* Sidebar */}
@@ -548,7 +550,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                       (msg.sender === userId &&
                         msg.receiver === selectedCustomer))) ||
                   msg.type === "SYSTEM" ||
-                  msg.type === "AI"
+                  msg.type === "HISTORY"
               )
               .map((msg, idx) => {
                 if (msg.type === "SYSTEM") {
