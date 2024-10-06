@@ -547,7 +547,8 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                     (msg.sender === selectedCustomer ||
                       (msg.sender === userId &&
                         msg.receiver === selectedCustomer))) ||
-                  msg.type === "SYSTEM"
+                  msg.type === "SYSTEM" ||
+                  msg.type === "AI"
               )
               .map((msg, idx) => {
                 if (msg.type === "SYSTEM") {
@@ -567,7 +568,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                   );
                 }
 
-                const isOutgoing = msg.sender === userId;
+                const isOutgoing = msg.sender === userId || "AI";
                 return (
                   <Flex
                     key={idx}
