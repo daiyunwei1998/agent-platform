@@ -614,7 +614,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                       borderRadius="md"
                       maxW="70%"
                     >
-                      <Text>{msg.content}</Text>
+                      <Text><ReactMarkdown>{msg.content}</ReactMarkdown></Text>
                       <Text fontSize="xs" color="gray.500" textAlign="right">
                         {formatTimestamp(msg.timestamp)}
                       </Text>
