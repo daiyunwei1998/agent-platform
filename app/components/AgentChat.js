@@ -19,6 +19,8 @@ import {
   useToast,
   IconButton,
   Collapse,
+  UnorderedList,
+  ListItem,
 } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost } from "@/app/config";
@@ -386,7 +388,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       if (response.data && Array.isArray(response.data)) {
         const historyMessages = response.data.map((msg) => ({
           ...msg,
-          type:"HISTORY",
+          type: "HISTORY",
           timestamp: msg.timestamp || new Date().toISOString(),
         }));
 
@@ -442,7 +444,17 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
-  console.log(messages)
+  // Define custom components for ReactMarkdown to add padding to bullet points
+  const markdownComponents = {
+    ul: ({ node, ...props }) => (
+      <UnorderedList pl={4} styleType="disc" {...props} />
+    ),
+    li: ({ node, ...props }) => (
+      <ListItem pl={2} {...props} />
+    ),
+  };
+
+  console.log(messages);
   return (
     <Flex height="calc(100vh - 72px)" direction="row">
       {/* Sidebar */}
@@ -550,7 +562,9 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                 borderColor="blue.200"
                 pl={10}
               >
-                <ReactMarkdown>{summary}</ReactMarkdown> {/* Markdown Rendering */}
+                <ReactMarkdown components={markdownComponents}>
+                  {summary}
+                </ReactMarkdown> {/* Markdown Rendering */}
               </Box>
             ) : (
               <Text color="gray.500">No summary available.</Text>
@@ -594,7 +608,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                   );
                 }
 
-                const isOutgoing = msg.sender === userId || msg.sender === "AI";;
+                const isOutgoing = msg.sender === userId || msg.sender === "AI";
                 return (
                   <Flex
                     key={idx}
@@ -614,7 +628,9 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                       borderRadius="md"
                       maxW="70%"
                     >
-                      <Text><ReactMarkdown>{msg.content}</ReactMarkdown></Text>
+                      <ReactMarkdown components={markdownComponents}>
+                        {msg.content}
+                      </ReactMarkdown>
                       <Text fontSize="xs" color="gray.500" textAlign="right">
                         {formatTimestamp(msg.timestamp)}
                       </Text>
