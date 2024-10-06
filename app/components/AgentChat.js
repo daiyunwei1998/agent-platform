@@ -42,6 +42,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
   const messageRefs = useRef({});
   const selectedCustomerRef = useRef(null);
   const messageQueueRef = useRef([]);
+  const messagesEndRef = useRef(null); // Reference for auto-scroll
 
   const toast = useToast();
 
@@ -62,6 +63,13 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-scroll effect
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   // Function to fetch connected users
   const fetchConnectedUsers = async () => {
@@ -606,6 +614,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                   </Flex>
                 );
               })}
+            <div ref={messagesEndRef} /> {/* Auto-scroll anchor */}
           </VStack>
         </Box>
 
