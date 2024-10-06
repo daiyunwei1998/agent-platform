@@ -46,6 +46,20 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
   const toast = useToast();
 
+  // Utility function to merge and deduplicate customers
+  const mergeCustomers = (existingCustomers, newCustomers) => {
+    const customerMap = new Map();
+    existingCustomers.forEach((customer) => {
+      customerMap.set(customer.user_id, customer);
+    });
+    newCustomers.forEach((customer) => {
+      if (!customerMap.has(customer.user_id)) {
+        customerMap.set(customer.user_id, customer);
+      }
+    });
+    return Array.from(customerMap.values());
+  };
+
   // Fetch connected users and tenant logo on mount
   useEffect(() => {
     connectWebSocket();
@@ -79,7 +93,9 @@ const AgentChat = ({ tenantId, userId, userName }) => {
       );
       if (response.data && response.data.data) {
         const users = response.data.data; // Expecting [{ user_id, user_name }, ...]
-        setAssignedCustomers(users);
+
+        // Merge and deduplicate customers
+        setAssignedCustomers((prev) => mergeCustomers(prev, users));
       } else {
         console.error("Invalid response format:", response);
       }
@@ -195,14 +211,14 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     const message = JSON.parse(payload.body);
     console.log("New Customer:", message);
 
-    if (
-      message.sender &&
-      !assignedCustomers.find((user) => user.user_id === message.sender)
-    ) {
-      setAssignedCustomers((prev) => [
-        ...prev,
-        { user_id: message.sender, user_name: message.sender_name },
-      ]);
+    if (message.sender && message.sender_name) {
+      const newCustomer = {
+        user_id: message.sender,
+        user_name: message.sender_name,
+      };
+
+      // Merge and deduplicate customers
+      setAssignedCustomers((prev) => mergeCustomers(prev, [newCustomer]));
     }
 
     setMessages((prev) => [
