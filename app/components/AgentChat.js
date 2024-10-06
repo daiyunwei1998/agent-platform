@@ -21,6 +21,7 @@ import {
   Collapse,
   UnorderedList,
   ListItem,
+  AvatarBadge
 } from "@chakra-ui/react";
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost } from "@/app/config";
@@ -496,7 +497,12 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                 size="sm"
                 src={`${imageHost}/tenant_logos/user.png`}
                 name={user.user_name}
-              />
+                >
+                  {waitingCustomers.includes(user.user_id) && (
+                    <AvatarBadge boxSize="1em" bg="yellow.500" />
+                  )}
+                </Avatar>
+              
               <VStack align="start" spacing={0}>
                 <Text fontWeight="bold">{user.user_name}</Text>
                 {waitingCustomers.includes(user.user_id) && (
