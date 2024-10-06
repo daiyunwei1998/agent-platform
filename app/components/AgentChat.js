@@ -570,11 +570,11 @@ const AgentChat = ({ tenantId, userId, userName }) => {
                   );
                 }
 
-                const isOutgoing = msg.sender === userId || "AI";
+                const isOutgoing = msg.sender === userId || msg.sender === "AI";;
                 return (
                   <Flex
                     key={idx}
-                    align={isOutgoing ? "flex-end" : "flex-start"}
+                    justify={isOutgoing ? "flex-end" : "flex-start"}
                   >
                     {!isOutgoing && (
                       <Avatar
