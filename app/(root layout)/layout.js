@@ -20,8 +20,8 @@ const geistMono = localFont({
 });
 
 const DEFAULT_TENANT_INFO = {
-  logo: '/agent.png',
-  name: '閃應雲客服平台',
+  logo: `${imageHost}/tenant_logos/agent.png`,
+  name: '閃應客服平台',
 };
 
 async function fetchTenantData(tenantId) {
@@ -85,12 +85,22 @@ export default async function RootLayout({ children }) {
     <html lang="en">
       <head>
         <link rel="icon" href={tenantInfo.logo} />
-        <title>{`${tenantInfo.name} | 閃應雲客服平台`}</title>
+        <title>{`${tenantInfo.name} | 閃應客服平台`}</title>
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <Providers>
         <NavbarWrapper logo={tenantInfo.logo} name={tenantInfo.name}/>
           {children}
+
+          <footer style={{ backgroundColor:"rgb(248, 250, 252)", textAlign: 'center', padding: '20px', marginTop: 'auto' }}>
+            <a
+              href="/demo/infra"
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              © 2024 閃應 All rights reserved.
+            </a>
+          </footer>
+
         </Providers>
       </body>
     </html>
@@ -98,6 +108,6 @@ export default async function RootLayout({ children }) {
 }
 
 export const metadata = {
-  title: '閃應雲客服平台',
-  description: '閃應雲客服平台',
+  title: '閃應客服平台',
+  description: '閃應客服平台',
 };

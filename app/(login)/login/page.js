@@ -20,7 +20,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { FcGoogle } from 'react-icons/fc'
 import { Providers } from '@/app/components/providers'
-import { chatServiceHost, tenantServiceHost, domain } from '@/app/config'
+import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config'
 
 export default function LoginPage() {
   const [alias, setAlias] = useState('')
@@ -127,7 +127,7 @@ export default function LoginPage() {
         })
 
         // Redirect to domain
-        window.location.href = '/'
+        window.location.href = '/admin/bot-management'
       } else {
         // Log the response status for debugging
         console.log('Response Status:', response.status)
@@ -194,7 +194,7 @@ export default function LoginPage() {
               justify={'center'}
             >
               <Stack spacing={6} w={'full'} maxW={'lg'}>
-                <Box as="img" src="/agent.png" alt="閃應雲" w={40} />
+                <Box as="img" src={`${imageHost}/tenant_logos/agent.png`} alt="閃應" w={40} />
                 <Heading fontSize={{ base: '3xl', md: '4xl', lg: '5xl' }}>
                   屬於你的 AI 客服機器人
                 </Heading>
@@ -207,7 +207,7 @@ export default function LoginPage() {
                   position="absolute"
                   bottom={4}
                 >
-                  © 2024 閃應雲 All rights reserved.
+                  © 2024 閃應 All rights reserved.
                 </Text>
               </Stack>
             </Flex>
@@ -215,14 +215,14 @@ export default function LoginPage() {
             <Flex flex={1} p={10} align={'center'} justify={'center'}>
               <Stack spacing={4} w={'full'} maxW={'md'}>
                 <Heading fontSize={'4xl'} textAlign={'center'}>
-                  登入賬戶
+                  登入帳戶
                 </Heading>
                 <Text
                   fontSize={'xl'}
                   color={'gray.600'}
                   textAlign={'center'}
                 >
-                  沒有賬戶？{' '}
+                  沒有帳戶？{' '}
                   <Link href="/signin" color={'blue.400'}>
                     註冊
                   </Link>
@@ -237,10 +237,10 @@ export default function LoginPage() {
                   />
                 </FormControl>
                 <FormControl id="email">
-                  <FormLabel>郵箱</FormLabel>
+                  <FormLabel>信箱</FormLabel>
                   <Input
                     type="email"
-                    placeholder="請輸入郵箱"
+                    placeholder="請輸入信箱"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -264,7 +264,7 @@ export default function LoginPage() {
                       isChecked={rememberMe}
                       onChange={(e) => setRememberMe(e.target.checked)}
                     >
-                      記住賬戶
+                      記住帳戶
                     </Checkbox>
                     <Link color={'blue.400'}>忘記密碼?</Link>
                   </Stack>

@@ -22,7 +22,7 @@ import {
 import { FcGoogle } from 'react-icons/fc';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { Providers } from '@/app/components/providers';
-import { chatServiceHost, tenantServiceHost } from '@/app/config';
+import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config';
 import { useRouter } from 'next/navigation';
 
 const Signin = () => {
@@ -218,10 +218,10 @@ const Signin = () => {
         <VStack spacing={6} align="stretch">
           <Progress value={step === 1 ? 50 : 100} size="sm" colorScheme="blue" />
           <Box textAlign="center">
-            <Image src="/agent.png" alt="Logo" boxSize="50px" mx="auto" mb={4} />
-            <Heading size="xl" mb={2}>註冊賬戶</Heading>
+            <Image src={`${imageHost}/tenant_logos/agent.png`} alt="Logo" boxSize="50px" mx="auto" mb={4} />
+            <Heading size="xl" mb={2}>註冊帳戶</Heading>
             <Text fontSize="md" color="gray.600">
-              {step === 1 ? "第一步: 註冊商戶資料" : "第二步: 新建管理員賬戶"}
+              {step === 1 ? "第一步: 註冊商戶資料" : "第二步: 新建管理員帳戶"}
             </Text>
           </Box>
 
@@ -259,12 +259,12 @@ const Signin = () => {
             ) : (
               <>
                 <FormControl isRequired>
-                  <FormLabel>賬戶名</FormLabel>
+                  <FormLabel>帳戶名</FormLabel>
                   <Input name="name" value={formData.name} onChange={handleInputChange} placeholder="請輸入用戶名" />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>郵箱</FormLabel>
+                  <FormLabel>信箱</FormLabel>
                   <Input name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="請輸入電子信箱" />
                 </FormControl>
 
@@ -294,7 +294,7 @@ const Signin = () => {
                     上一步
                   </Button>
                   <Button colorScheme="blue" w="full" type="submit" isLoading={isLoading}>
-                    {isLoading ? <Spinner size="sm" /> : "建立賬戶"}
+                    {isLoading ? <Spinner size="sm" /> : "建立帳戶"}
                   </Button>
                 </HStack>
               </>
@@ -315,7 +315,7 @@ const Signin = () => {
               </Button>
 
               <Text textAlign="center">
-                已經有賬戶了?{' '}
+                已經有帳戶了?{' '}
                 <Button variant="link" colorScheme="blue">
                   登入
                 </Button>
@@ -324,7 +324,7 @@ const Signin = () => {
           )}
           
           <Text fontSize="sm" color="gray.500" textAlign="center" mt={4}>
-            © 2024 閃應雲 All rights reserved.
+            © 2024 閃應 All rights reserved.
           </Text>
         </VStack>
       </Container>

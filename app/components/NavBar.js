@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { setCookie, getCookie, deleteCookie } from 'cookies-next';
 import { useCookies } from 'react-cookie';
-import { chatServiceHost } from '@/app/config';
+import { chatServiceHost, imageHost } from '@/app/config';
 
 
 const Navbar = ({ name, logo, initialLoggedIn}) => {
@@ -20,6 +20,9 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
   const [loggedIn, setLoggedIn] = useState(initialLoggedIn)
   const [cookies, setCookie, removeCookie] = useCookies(['jwt', 'tenantId']); 
 
+  useEffect(() => {
+    setLoggedIn(initialLoggedIn);
+  }, [initialLoggedIn]);
 
   // Use responsive value to hide text on smaller screens
   const showText = useBreakpointValue({ base: false, md: true })
@@ -71,7 +74,7 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
     <Box bg={bgColor} borderBottom={`1px solid ${borderColor}`} p={4}>
       <Flex justify="space-between" align="center">
         {/* Admin Dashboard title with icon */}
-        <Link href="/">
+        <Link href="/admin/bot-management">
           <Flex align="center">
             <Image src={logo} alt="User" boxSize="40px"/>
             <Box fontSize="2xl" fontWeight="bold" ml={4}>
@@ -82,7 +85,7 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
 
         {/* Navigation Items */}
         <Flex gap={4}>
-          {navItems.map((item) => (
+          {pathname !== '/' && navItems.map((item) => (
             <Button
               key={item.name}
               onClick={() => router.push(item.href)}
@@ -103,7 +106,7 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
         {loggedIn ? (
           <Menu>
             <MenuButton as={Button} rounded={'full'} variant={'link'} cursor={'pointer'} minW={0}>
-              <Image src={"/user.png"} alt="User" boxSize="40px" borderRadius="full" />
+              <Image src={`${imageHost}/tenant_logos/user.png`} alt="User" boxSize="40px" borderRadius="full" />
             </MenuButton>
             <MenuList zIndex={10}>
               <MenuItem onClick={() => router.push('/account-settings')}>Account Settings</MenuItem>
