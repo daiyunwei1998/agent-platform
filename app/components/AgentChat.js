@@ -65,17 +65,20 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
   // Fetch connected users and tenant logo on mount
   useEffect(() => {
+    let isMounted = true; 
     connectWebSocket();
     fetchLogo();
     fetchConnectedUsers();
 
     return () => {
+      isMounted = false; 
       if (selectedCustomerRef.current) {
         dropCustomer(selectedCustomerRef.current);
       }
 
       if (clientRef.current) {
         clientRef.current.deactivate();
+        clientRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,6 +202,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
           duration: 5000,
           isClosable: true,
         });
+        clientRef.current = null; 
       },
       debug: (str) => {
         console.log(str);
@@ -303,6 +307,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
   // Function to fetch summary
   const fetchSummary = async (customerId) => {
+    if (!isMounted) return;
     setIsLoadingSummary(true);
     setSummaryError(null);
     setSummary(null);
@@ -313,20 +318,26 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         customer_id: customerId,
       });
 
-      const summaryText = response.data.summary;
-      setSummary(summaryText);
+      if (isMounted) { // Check before updating state
+        const summaryText = response.data.summary;
+        setSummary(summaryText);
+      }
     } catch (error) {
       console.error("Error fetching summary:", error);
-      setSummaryError("Failed to load summary.");
-      toast({
-        title: "Error",
-        description: "Failed to fetch customer summary.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      if (isMounted) { // Check before updating state
+        setSummaryError("Failed to load summary.");
+        toast({
+          title: "Error",
+          description: "Failed to fetch customer summary.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
     } finally {
-      setIsLoadingSummary(false);
+      if (isMounted) { // Check before updating state
+        setIsLoadingSummary(false);
+      }
     }
   };
 
