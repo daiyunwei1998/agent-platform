@@ -427,6 +427,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
           duration: 5000,
           isClosable: true,
         });
+      }
     }
   };
 
