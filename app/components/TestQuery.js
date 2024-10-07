@@ -51,7 +51,7 @@ const TestQuery = ({ tenantId }) => {
     setIsLoadingQuery(true);
 
     try {
-      const response = await fetch(`${aiServiceHost}/api/v1/rag`, {
+      const response = await fetch(`${aiServiceHost}/api/v1/rag/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
