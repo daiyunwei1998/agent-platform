@@ -416,14 +416,17 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         console.error("Invalid history response format:", response);
       }
     } catch (error) {
-      console.error("Error fetching chat history:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch chat history.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      if (error.response && error.response.status === 404) {
+        console.warn("No chat history found for this customer.");
+      } else {
+        console.error("Error fetching chat history:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch chat history.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
     }
   };
 
