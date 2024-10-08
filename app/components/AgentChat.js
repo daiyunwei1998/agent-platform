@@ -65,13 +65,11 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
   // Fetch connected users and tenant logo on mount
   useEffect(() => {
-    let isMounted = true; 
     connectWebSocket();
     fetchLogo();
     fetchConnectedUsers();
 
     return () => {
-      isMounted = false; 
       if (selectedCustomerRef.current) {
         dropCustomer(selectedCustomerRef.current);
       }
@@ -307,7 +305,6 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
   // Function to fetch summary
   const fetchSummary = async (customerId) => {
-    if (!isMounted) return;
     setIsLoadingSummary(true);
     setSummaryError(null);
     setSummary(null);
@@ -318,14 +315,12 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         customer_id: customerId,
       });
 
-      if (isMounted) { // Check before updating state
-        const summaryText = response.data.summary;
-        setSummary(summaryText);
-      }
+      const summaryText = response.data.summary;
+      setSummary(summaryText);
+     
     } catch (error) {
       console.error("Error fetching summary:", error);
-      if (isMounted) { // Check before updating state
-        setSummaryError("Failed to load summary.");
+      setSummaryError("Failed to load summary.");
         toast({
           title: "Error",
           description: "Failed to fetch customer summary.",
@@ -333,7 +328,6 @@ const AgentChat = ({ tenantId, userId, userName }) => {
           duration: 5000,
           isClosable: true,
         });
-      }
     } finally {
       if (isMounted) { // Check before updating state
         setIsLoadingSummary(false);
