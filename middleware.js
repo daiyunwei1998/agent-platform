@@ -43,11 +43,11 @@ export function middleware(request) {
   
     // Optionally, you can protect certain routes by redirecting unauthenticated users
     // For example, protect all routes except publicPaths
-    const isPublic = publicPaths.includes(pathname);
-    if (!isPublic && !jwt) {
-      console.log('Unauthenticated user trying to access protected route. Redirecting to login.');
-      return NextResponse.redirect(new URL('/login', request.url));
-    }
+    // const isPublic = publicPaths.includes(pathname);
+    // if (!isPublic && !jwt) {
+    //   console.log('Unauthenticated user trying to access protected route. Redirecting to login.');
+    //   return NextResponse.redirect(new URL('/login', request.url));
+    // }
   
     // Return the response with modified request headers
     return NextResponse.next({
