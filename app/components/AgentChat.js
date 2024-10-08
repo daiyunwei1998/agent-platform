@@ -329,9 +329,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
           isClosable: true,
         });
     } finally {
-      if (isMounted) { // Check before updating state
-        setIsLoadingSummary(false);
-      }
+      setIsLoadingSummary(false);
     }
   };
 
