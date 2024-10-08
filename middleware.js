@@ -30,7 +30,7 @@ export function middleware(request) {
 
 
     // Define paths that should be accessible without authentication
-    const publicPaths = ['/login', '/signup' ]; 
+    const publicPaths = ['/login', '/signup', '/signin' ]; 
 
     // Get the pathname of the requested URL
     const { pathname } = request.nextUrl;
