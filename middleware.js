@@ -28,11 +28,34 @@ export function middleware(request) {
     requestHeaders.set('X-Tenant-ID', tenantId);
   }
 
-  // Return the response with modified request headers
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  });
+
+    // Define paths that should be accessible without authentication
+    const publicPaths = ['/login', '/signup' ]; 
+
+    // Get the pathname of the requested URL
+    const { pathname } = request.nextUrl;
+  
+    // If the user is authenticated and tries to access the login page, redirect to home
+    if (jwt && pathname === '/login') {
+      console.log('Authenticated user trying to access login page. Redirecting to home.');
+      return NextResponse.redirect(new URL('/admin/bot-management', request.url));
+    }
+  
+    // Optionally, you can protect certain routes by redirecting unauthenticated users
+    // For example, protect all routes except publicPaths
+    const isPublic = publicPaths.includes(pathname);
+    if (!isPublic && !jwt) {
+      console.log('Unauthenticated user trying to access protected route. Redirecting to login.');
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+  
+    // Return the response with modified request headers
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    });
+
+
 }
 
