@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
-
-// Define your secret key (you should ideally store this in an environment variable)
-const SECRET_KEY = process.env.JWT_SECRET_KEY;
+import jwtDecode from 'jwt-decode';
 
 export function middleware(request) {
   // Get the JWT from the cookie
@@ -14,34 +11,31 @@ export function middleware(request) {
 
   let userRole = null;
 
-  // Parse and verify the JWT if it exists
+  // Parse the JWT if it exists (Note: this doesn't verify the token)
   if (jwtToken) {
     try {
-      // Verify the JWT and decode it using the secret key
-      const decodedToken = jwt.verify(jwtToken, SECRET_KEY);
+      const decodedToken = jwtDecode(jwtToken);
       console.log('JWT decoded successfully:', decodedToken);
 
-      // Extract the role from the token
+      // Extract the role from the decoded token
       userRole = decodedToken.role;
       console.log('User role:', userRole);
 
       // Set the Authorization header
       requestHeaders.set('Authorization', `Bearer ${jwtToken}`);
     } catch (err) {
-      console.log('Invalid JWT:', err);
-      // If the token is invalid, you may want to handle it by redirecting to login or throwing an error
-      return NextResponse.redirect(new URL('/login', request.url));
+      console.log('Error decoding JWT:', err);
     }
   }
 
-  // Get the tenant ID from the cookie 
+  // Get the tenant ID from the cookie (if you're using multi-tenancy)
   const tenantId = request.cookies.get('tenantId')?.value;
   if (tenantId) {
     requestHeaders.set('X-Tenant-ID', tenantId);
   }
 
   // Define paths that should be accessible without authentication
-  const publicPaths = ['/login', '/signup'];
+  const publicPaths = ['/login', '/signup', '/signin'];
 
   // Get the pathname of the requested URL
   const { pathname } = request.nextUrl;
