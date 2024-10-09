@@ -25,7 +25,7 @@ import { Providers } from '@/app/components/providers';
 import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config';
 import { useRouter } from 'next/navigation';
 
-const Signin = () => {
+const SignUp = () => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -332,4 +332,4 @@ const Signin = () => {
   );
 };
 
-export default Signin;
+export default SignUp;

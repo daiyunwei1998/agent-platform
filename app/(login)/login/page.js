@@ -223,7 +223,7 @@ export default function LoginPage() {
                   textAlign={'center'}
                 >
                   沒有帳戶？{' '}
-                  <Link href="/signin" color={'blue.400'}>
+                  <Link href="/signup" color={'blue.400'}>
                     註冊
                   </Link>
                 </Text>
