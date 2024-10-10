@@ -19,7 +19,6 @@ import {
   InputGroup,
   InputRightElement,
 } from '@chakra-ui/react';
-import { FcGoogle } from 'react-icons/fc';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { Providers } from '@/app/components/providers';
 import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config';
@@ -304,15 +303,6 @@ const SignUp = () => {
           {step === 2 && (
             <>
               <Divider />
-
-              <Button
-                leftIcon={<FcGoogle />}
-                variant="outline"
-                w="full"
-                size="lg"
-              >
-                使用 Google 登入
-              </Button>
 
               <Text textAlign="center">
                 已經有帳戶了?{' '}
