@@ -1,26 +1,58 @@
 import { NextResponse } from 'next/server';
+import {jwtDecode} from 'jwt-decode';
+import { tenantServiceHost } from './app/config';
 
-export function middleware(request) {
+async function fetchTenantData(tenantId) {
+  try {
+    const params = new URLSearchParams();
+    params.append('tenant_id', tenantId);
+
+    const response = await fetch(`${tenantServiceHost}/api/v1/tenants/find?${params.toString()}`, {});
+    
+    if (!response.ok) {
+      console.error(`Tenant not found for alias: ${tenantId}. Status: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log('Received tenant data:', data);
+
+    return data;
+  } catch (error) {
+    console.error(`Error fetching tenant data for alias: ${tenantId}`, error);
+    return null;
+  }
+}
+
+export async function middleware(request) {
   // Get the JWT from the cookie
   const jwt = request.cookies.get('jwt')?.value;
 
-  let token = request.cookies.get('jwt')
   console.log(jwt) 
-  const allCookies = request.cookies.getAll()
- console.log(allCookies) // => [{ name: 'nextjs', value: 'fast' }]
- 
 
+  let userRole = null;
+  if (jwt) {
+    try {
+      const decodedToken = jwtDecode(jwt);
+      console.log('JWT decoded successfully:', decodedToken);
+
+      // Extract the role from the decoded token
+      userRole = decodedToken.roles[0].authority;
+      console.log('User role:', userRole);
+    
+      // Set the Authorization header
+      requestHeaders.set('Authorization', `Bearer ${jwtToken}`);
+    } catch (err) {
+      console.log('Error decoding JWT:', err);
+    }
+  }
+
+
+ 
 
   // Clone the request headers
   const requestHeaders = new Headers(request.headers);
   console.log('Middleware executed');
-
-  // Set the Authorization header if we have a JWT
-  if (jwt) {
-    console.log('jwt i got you!!!')
-    requestHeaders.set('Authorization', `Bearer ${jwt}`);
-  }
-  requestHeaders.set('hello', `world`);
 
   // Get the tenant ID from the cookie (if you're using multi-tenancy)
   const tenantId = request.cookies.get('tenantId')?.value;
@@ -28,6 +60,17 @@ export function middleware(request) {
     requestHeaders.set('X-Tenant-ID', tenantId);
   }
 
+  if (userRole === "ROLE_CUSTOMER") {
+    const fetchedTenantData = await fetchTenantData(tenantId);
+    const alias = fetchedTenantData.data.alias;
+
+    if (alias) {
+      return NextResponse.redirect(`https://${fetchedTenantData.data.alias}.flashresponse.net`);
+    } else {
+      return NextResponse.redirect(`/`);
+    }
+    
+  }
 
     // Define paths that should be accessible without authentication
     const publicPaths = ['/login', '/signup', '/signin' ]; 
@@ -40,6 +83,9 @@ export function middleware(request) {
       console.log('Authenticated user trying to access login page. Redirecting to home.');
       return NextResponse.redirect(new URL('/admin/bot-management', request.url));
     }
+
+    
+    
   
     // Optionally, you can protect certain routes by redirecting unauthenticated users
     // For example, protect all routes except publicPaths
