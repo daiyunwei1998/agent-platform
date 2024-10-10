@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import {jwtDecode} from 'jwt-decode';
 import { tenantServiceHost } from './app/config';
 
+
 async function fetchTenantData(tenantId) {
   try {
     const params = new URLSearchParams();
@@ -47,9 +48,6 @@ export async function middleware(request) {
     }
   }
 
-
- 
-
   // Clone the request headers
   const requestHeaders = new Headers(request.headers);
   console.log('Middleware executed');
@@ -72,17 +70,28 @@ export async function middleware(request) {
     
   }
 
-    // Define paths that should be accessible without authentication
-    const publicPaths = ['/login', '/signup', '/signin' ]; 
 
-    // Get the pathname of the requested URL
-    const { pathname } = request.nextUrl;
-  
-    // If the user is authenticated and tries to access the login page, redirect to home
-    if (jwt && pathname === '/login') {
-      console.log('Authenticated user trying to access login page. Redirecting to home.');
-      return NextResponse.redirect(new URL('/admin/bot-management', request.url));
+  // Get the pathname of the requested URL
+  const { pathname } = request.nextUrl;
+
+  // If the user is authenticated and tries to access the login page, redirect to home
+  if (jwtToken && pathname === '/login') {
+    console.log('Authenticated user trying to access login page. Redirecting to home.');
+    return NextResponse.redirect(new URL('/admin/bot-management', request.url));
+  }
+
+  // Protect /admin/* routes based on role
+  if (pathname.startsWith('/admin')) {
+    if (!jwtToken) {
+      console.log('Unauthenticated access attempt to admin pages. Redirecting to login.');
+      return NextResponse.redirect(new URL('/login', request.url));
     }
+
+    if (userRole !== 'ADMIN') {
+      console.log('Unauthorized user attempting to access admin pages. Redirecting to unauthorized page.');
+      return NextResponse.redirect(new URL('/unauthorized', request.url));  // Redirect to an unauthorized page
+    }
+
 
     
     
@@ -103,5 +112,17 @@ export async function middleware(request) {
     });
 
 
-}
+  // Optionally, protect all other routes except public paths
+  const isPublic = publicPaths.includes(pathname);
+  if (!isPublic && !jwtToken) {
+    console.log('Unauthenticated user trying to access protected route. Redirecting to login.');
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
 
+  // Return the response with modified request headers
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}
