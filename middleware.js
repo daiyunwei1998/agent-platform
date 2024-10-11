@@ -42,7 +42,7 @@ export async function middleware(request) {
       console.log('User role:', userRole);
     
       // Set the Authorization header
-      requestHeaders.set('Authorization', `Bearer ${jwtToken}`);
+      requestHeaders.set('Authorization', `Bearer ${jwt}`);
     } catch (err) {
       console.log('Error decoding JWT:', err);
     }
@@ -75,14 +75,14 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
 
   // If the user is authenticated and tries to access the login page, redirect to home
-  if (jwtToken && pathname === '/login') {
+  if (jwt && pathname === '/login') {
     console.log('Authenticated user trying to access login page. Redirecting to home.');
     return NextResponse.redirect(new URL('/admin/bot-management', request.url));
   }
 
   // Protect /admin/* routes based on role
   if (pathname.startsWith('/admin')) {
-    if (!jwtToken) {
+    if (!jwt) {
       console.log('Unauthenticated access attempt to admin pages. Redirecting to login.');
       return NextResponse.redirect(new URL('/login', request.url));
     }
