@@ -1,114 +1,151 @@
 "use client"
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ChakraProvider,
   Box,
-  Button,
   Container,
   Flex,
   Heading,
-  Image,
-  Stack,
   Text,
   VStack,
-  HStack,
-  Icon,
+  Input,
+  Button,
   useColorModeValue,
+  Textarea,
 } from '@chakra-ui/react';
-import { FaRobot, FaCloud, FaComments, FaFileUpload } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const Feature = ({ icon, title, text }) => {
+const MotionBox = motion(Box);
+
+const DemoChat = () => {
+  const [messages, setMessages] = useState([
+    { role: 'assistant', content: '您好！我是閃應AI助理。我可以幫您解答關於我們產品的任何問題。您想了解些什麼？' }
+  ]);
+  const [input, setInput] = useState('');
+
+  const handleSend = () => {
+    if (input.trim()) {
+      setMessages([...messages, { role: 'user', content: input }]);
+      setInput('');
+      
+      // Simulate AI response
+      setTimeout(() => {
+        let response;
+        if (input.toLowerCase().includes('價格')) {
+          response = '我們提供多種靈活的定價方案，以適應不同規模的企業需求。基礎版每月¥999起，包含基本的AI客服功能。企業版每月¥2999起，提供更多高級功能和客製化選項。您可以在我們的官網上找到詳細的價格信息。';
+        } else if (input.toLowerCase().includes('功能')) {
+          response = '閃應AI客服代理具有多項強大功能，包括：1. 自動解析上傳的PDF文檔，快速建立知識庫。2. 使用最先進的RAG（檢索增強生成）技術，無需編碼即可創建AI代理。3. 提供全面的客戶服務分析和報告平台。4. AI輔助人工客服，提高效率和服務質量。這些功能共同幫助企業提升客戶服務體驗和效率。';
+        } else {
+          response = '感謝您的提問。閃應AI客服代理旨在幫助企業快速構建智能、高效的客戶服務系統。我們的解決方案可以理解和回答客戶的各種查詢，同時不斷學習和改進。您還有其他具體想了解的方面嗎？比如功能特點或價格方案？';
+        }
+        setMessages(msgs => [...msgs, { role: 'assistant', content: response }]);
+      }, 1000);
+    }
+  };
+
   return (
-    <VStack>
-      <Icon as={icon} w={10} h={10} color="blue.500" />
-      <Text fontWeight="bold">{title}</Text>
-      <Text textAlign="center">{text}</Text>
+    <VStack spacing={4} align="stretch">
+      <Box 
+        bg={useColorModeValue('white', 'gray.700')} 
+        borderRadius="md" 
+        p={4} 
+        height="300px" 
+        overflowY="auto"
+        boxShadow="md"
+      >
+        {messages.map((message, index) => (
+          <Box 
+            key={index} 
+            bg={message.role === 'user' ? 'blue.100' : 'gray.100'} 
+            color="gray.800"
+            borderRadius="md" 
+            p={2} 
+            mb={2}
+            alignSelf={message.role === 'user' ? 'flex-end' : 'flex-start'}
+          >
+            {message.content}
+          </Box>
+        ))}
+      </Box>
+      <Flex>
+        <Input 
+          value={input} 
+          onChange={(e) => setInput(e.target.value)} 
+          placeholder="輸入您的問題..."
+          mr={2}
+        />
+        <Button onClick={handleSend} colorScheme="blue">發送</Button>
+      </Flex>
     </VStack>
   );
 };
 
-const LandingPage = () => {
+const DynamicLandingPage = () => {
   const bgColor = useColorModeValue('gray.50', 'gray.800');
   const textColor = useColorModeValue('gray.600', 'gray.200');
   const headingColor = useColorModeValue('gray.800', 'white');
 
   return (
     <ChakraProvider>
-      <Box bg={bgColor} minH="100vh">
-        <Container maxW="container.xl" px={{ base: 6, md: 12, lg: 20 }}>
-          <Flex direction={{ base: 'column', md: 'row' }} align="center" justify="space-between" py={20} gap={10}>
-            <VStack align="flex-start" spacing={6} maxW="lg">
-              <Heading as="h1" size="3xl" color={headingColor}>
+      <Box bg={bgColor} minH="100vh" py={20}>
+        <Container maxW="container.xl">
+          <VStack spacing={12} align="stretch">
+            <MotionBox
+              initial={{ opacity: 0, y: -50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <Heading as="h1" size="4xl" textAlign="center" color={headingColor} fontWeight="extrabold">
                 閃應
               </Heading>
-              <Text fontSize="xl" color={textColor}>
-                在幾分鐘內生成定制的AI客服代理。無需編碼！
+              <Text fontSize="2xl" textAlign="center" color={textColor} mt={4}>
+                3分鐘內創建您的AI客戶服務代理
               </Text>
-              <Button colorScheme="blue" size="lg">
-                立即開始
-              </Button>
-            </VStack>
-            <Box boxSize={{ base: 'sm', md: 'md' }}>
-              <Image src="/hero-image.png" alt="AI代理插圖" />
-            </Box>
-          </Flex>
+            </MotionBox>
 
-          <VStack spacing={16} py={20}>
-            <Heading as="h2" size="2xl" textAlign="center" color={headingColor}>
-              功能特點
-            </Heading>
-            <Stack direction={{ base: 'column', md: 'row' }} spacing={{ base: 10, md: 6, lg: 10 }} width="100%" justifyContent="space-between">
-              <Feature
-                icon={FaRobot}
-                title="基於RAG的AI代理"
-                text="創建針對您業務需求量身定制的智能代理"
-              />
-              <Feature
-                icon={FaCloud}
-                title="SaaS平台"
-                text="適用於各種規模企業的全託管、可擴展解決方案"
-              />
-              <Feature
-                icon={FaComments}
-                title="內置聊天支持"
-                text="AI代理與客戶支持的無縫集成"
-              />
-              <Feature
-                icon={FaFileUpload}
-                title="輕鬆上傳"
-                text="只需上傳您的PDF文件，幾分鐘即可開始使用"
-              />
-            </Stack>
-          </VStack>
+            <MotionBox
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Flex direction={{ base: 'column', md: 'row' }} align="stretch" justify="space-between">
+                <Box flex="1" mr={{ base: 0, md: 8 }} mb={{ base: 8, md: 0 }}>
+                  <Heading as="h2" size="xl" mb={4}>
+                    體驗閃應AI
+                  </Heading>
+                  <Text fontSize="lg" mb={4}>
+                    右側是閃應AI客服代理的即時演示。嘗試詢問有關我們的功能、價格或任何其他問題，感受AI如何智能回應您的需求。
+                  </Text>
+                  <Text fontSize="lg">
+                    閃應讓您能夠快速部署類似的AI代理，為您的客戶提供24/7的即時支援。只需上傳您的文檔，我們的系統就會自動生成一個專屬於您業務的智能客服系統。
+                  </Text>
+                </Box>
+                <Box flex="1">
+                  <DemoChat />
+                </Box>
+              </Flex>
+            </MotionBox>
 
-          <VStack spacing={8} py={20}>
-            <Heading as="h2" size="2xl" textAlign="center" color={headingColor}>
-              使用方法
-            </Heading>
-            <HStack spacing={{ base: 4, md: 8 }} wrap="wrap" justify="center">
-              <VStack p={6} bg="white" borderRadius="lg" boxShadow="md" maxW="sm" flex="1" minW={{ base: "100%", md: "30%" }}>
-                <Text fontWeight="bold" fontSize="xl">1. 上傳您的內容</Text>
-                <Text textAlign="center">上傳有關您業務的PDF或文檔</Text>
+            <MotionBox
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+            >
+              <VStack spacing={4} align="stretch" bg="blue.500" color="white" p={8} borderRadius="lg">
+                <Heading as="h3" size="lg">
+                  準備好升級您的客戶服務了嗎？
+                </Heading>
+                <Text fontSize="lg">
+                  上傳您的文檔，在幾分鐘內創建您的AI客戶服務代理。無需編碼，立即體驗智能客服的力量。
+                </Text>
+                <Box>
+                  <Button colorScheme="whiteAlpha" size="lg">
+                    開始免費試用
+                  </Button>
+                </Box>
               </VStack>
-              <VStack p={6} bg="white" borderRadius="lg" boxShadow="md" maxW="sm" flex="1" minW={{ base: "100%", md: "30%" }}>
-                <Text fontWeight="bold" fontSize="xl">2. AI處理</Text>
-                <Text textAlign="center">我們的系統分析並創建定制的AI代理</Text>
-              </VStack>
-              <VStack p={6} bg="white" borderRadius="lg" boxShadow="md" maxW="sm" flex="1" minW={{ base: "100%", md: "30%" }}>
-                <Text fontWeight="bold" fontSize="xl">3. 部署和互動</Text>
-                <Text textAlign="center">開始使用您的AI代理進行客戶支持</Text>
-              </VStack>
-            </HStack>
-          </VStack>
-
-          <VStack spacing={8} py={20}>
-            <Heading as="h2" size="2xl" textAlign="center" color={headingColor}>
-              準備好改變您的客戶支持了嗎？
-            </Heading>
-            <Button colorScheme="blue" size="lg">
-              立即開始
-            </Button>
+            </MotionBox>
           </VStack>
         </Container>
       </Box>
@@ -116,4 +153,4 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage;
+export default DynamicLandingPage;
