@@ -312,10 +312,7 @@ const SignUp = () => {
               </Text>
             </>
           )}
-          
-          <Text fontSize="sm" color="gray.500" textAlign="center" mt={4}>
-            © 2024 閃應 All rights reserved.
-          </Text>
+        
         </VStack>
       </Container>
     </Providers>
