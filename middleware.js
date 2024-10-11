@@ -91,6 +91,7 @@ export async function middleware(request) {
       console.log('Unauthorized user attempting to access admin pages. Redirecting to unauthorized page.');
       return NextResponse.redirect(new URL('/unauthorized', request.url));  // Redirect to an unauthorized page
     }
+  }
 
 
     
