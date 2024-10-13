@@ -53,6 +53,7 @@ const UpdateKnowledgeBase = ({
   setPendingTasks,
   connect,
   clientRef,
+  setRefreshKnowledgeBase, 
 }) => {
   // States for File Upload
   const [files, setFiles] = useState([]);
@@ -200,6 +201,7 @@ const UpdateKnowledgeBase = ({
         setEntryContent("");
         setEntryDocName("");
 
+        setRefreshKnowledgeBase((prev) => prev + 1);
         // Optionally, update pendingTasks or other state
         // setPendingTasks([...pendingTasks, `Added entry to ${entryDocName}`]);
       } else {
