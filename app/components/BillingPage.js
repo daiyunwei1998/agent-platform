@@ -51,6 +51,7 @@ const BillingPage = ({ tenantId }) => {
   const [totalUsage, setTotalUsage] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
   const [billingHistory, setBillingHistory] = useState([]);
+  const [hasBillingHistory, setHasBillingHistory] = useState(true); // Added state
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showUsageDetails, setShowUsageDetails] = useState(false);
@@ -59,6 +60,7 @@ const BillingPage = ({ tenantId }) => {
   const [currentUsageAlert, setCurrentUsageAlert] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUsageAlertLoading, setIsUsageAlertLoading] = useState(true);
+  const [downloadingInvoices, setDownloadingInvoices] = useState([]); // Added state
 
   const toast = useToast();
 
@@ -113,7 +115,7 @@ const BillingPage = ({ tenantId }) => {
           }
         );
 
-        if (!Array.isArray(response.data) || response.data.length === 0) {
+        if (!Array.isArray(response.data)) {
           throw new Error('Invalid data received from API');
         }
 
@@ -135,22 +137,31 @@ const BillingPage = ({ tenantId }) => {
         setTotalUsage(totalTokens);
         setTotalPrice(totalCost);
 
-        // Set fake billing history data
-        setBillingHistory([
-          { period: 'Aug 2024', tokensUsed: 500000, totalPrice: 50.0 },
-          { period: 'Jul 2024', tokensUsed: 450000, totalPrice: 45.0 },
-          { period: 'Jun 2024', tokensUsed: 480000, totalPrice: 48.0 },
-        ]);
-      } catch (error) {
-        if (error.response && error.response.status === 404) {
-          setUsageData([]);
-          setTotalUsage(0);
-          setTotalPrice(0);
-          console.log('No usage data found for the selected period.');
-        } else {
-          console.error('Error fetching usage data:', error);
-          setError(error.message);
+        // Fetch real billing history data
+        try {
+          const billingResponse = await axios.get(
+            `${tenantServiceHost}/api/v1/tenants/${tenantId}/billing-history`
+          );
+          if (Array.isArray(billingResponse.data) && billingResponse.data.length > 0) {
+            setBillingHistory(billingResponse.data);
+            setHasBillingHistory(true);
+          } else {
+            setBillingHistory([]);
+            setHasBillingHistory(false);
+          }
+        } catch (billingError) {
+          if (billingError.response && billingError.response.status === 404) {
+            // No billing history found
+            setBillingHistory([]);
+            setHasBillingHistory(false);
+          } else {
+            // Other errors
+            throw billingError;
+          }
         }
+      } catch (error) {
+        console.error('Error fetching usage data:', error);
+        setError(error.message || 'An error occurred while fetching data.');
       } finally {
         setIsLoading(false);
       }
@@ -250,20 +261,15 @@ const BillingPage = ({ tenantId }) => {
     );
   }
 
-  if (error) {
-    return (
-      <Alert status="error">
-        <AlertIcon />
-        Error loading data: {error}
-      </Alert>
-    );
-  }
-
-  const periodString = getCurrentMonthRange();
-
   return (
     <Box maxWidth="1200px" margin="auto" padding={responsivePadding}>
       <VStack spacing={responsiveSpacing} align="stretch">
+        {error && (
+          <Alert status="error">
+            <AlertIcon />
+            Error loading data: {error}
+          </Alert>
+        )}
         <Heading as="h1" size="xl">
           Billing Dashboard
         </Heading>
@@ -273,7 +279,7 @@ const BillingPage = ({ tenantId }) => {
             <Stat>
               <StatLabel>Current Usage</StatLabel>
               <StatNumber>{totalUsage.toLocaleString()} tokens</StatNumber>
-              <StatHelpText>{periodString}</StatHelpText>
+              <StatHelpText>{getCurrentMonthRange()}</StatHelpText>
             </Stat>
           </FloatingBox>
           <FloatingBox flex={1}>
@@ -381,30 +387,40 @@ const BillingPage = ({ tenantId }) => {
           <Heading as="h2" size="md" mb={4}>
             Billing History
           </Heading>
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Period</Th>
-                <Th>Tokens Used</Th>
-                <Th>Total Price</Th>
-                <Th>Invoice</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {billingHistory.map((item, index) => (
-                <Tr key={index}>
-                  <Td>{item.period}</Td>
-                  <Td>{item.tokensUsed.toLocaleString()}</Td>
-                  <Td>${item.totalPrice.toFixed(2)}</Td>
-                  <Td>
-                    <Button size="sm" colorScheme="blue">
-                      Download Invoice
-                    </Button>
-                  </Td>
+          {hasBillingHistory ? (
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Period</Th>
+                  <Th>Tokens Used</Th>
+                  <Th>Total Price</Th>
+                  <Th>Invoice</Th>
                 </Tr>
-              ))}
-            </Tbody>
-          </Table>
+              </Thead>
+              <Tbody>
+                {billingHistory.map((item, index) => (
+                  <Tr key={index}>
+                    <Td>{item.period}</Td>
+                    <Td>{item.tokens_used.toLocaleString()}</Td> {/* Updated property */}
+                    <Td>${item.total_price.toFixed(2)}</Td> {/* Updated property */}
+                    <Td>
+                      <Button
+                        size="sm"
+                        colorScheme="blue"
+                        onClick={() => handleDownloadInvoice(item.id, item.period)}
+                        isLoading={downloadingInvoices.includes(item.id)}
+                        loadingText="Downloading"
+                      >
+                        Download Invoice
+                      </Button>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          ) : (
+            <Text>No billing history available.</Text>
+          )}
         </FloatingBox>
 
         <HStack justify="space-between" flexDirection={responsiveDirection}>
@@ -460,6 +476,60 @@ const BillingPage = ({ tenantId }) => {
       </Modal>
     </Box>
   );
+
+  // Handler for downloading invoice
+  async function handleDownloadInvoice(billingId, period) {
+    setDownloadingInvoices((prev) => [...prev, billingId]);
+    try {
+      const response = await axios.get(
+        `${tenantServiceHost}/api/v1/tenants/${tenantId}/billing-history/${billingId}/invoice`,
+        {
+          responseType: 'blob', // Important for handling binary data
+        }
+      );
+
+      // Create a link to trigger the download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Extract filename from headers or set a default name
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = `Invoice_${period.replace(' ', '_')}.pdf`;
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (fileNameMatch && fileNameMatch.length > 1) {
+          fileName = fileNameMatch[1];
+        }
+      }
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Download Complete',
+        description: `Invoice for ${period} has been downloaded.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'There was an error downloading the invoice.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setDownloadingInvoices((prev) => prev.filter((id) => id !== billingId));
+    }
+  }
 };
 
 export default BillingPage;
