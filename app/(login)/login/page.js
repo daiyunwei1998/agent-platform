@@ -265,7 +265,7 @@ export default function LoginPage() {
                     >
                       記住帳戶
                     </Checkbox>
-                    <Link color={'blue.400'}>忘記密碼?</Link>
+                  
                   </Stack>
                   <Button
                     colorScheme={'blue'}
