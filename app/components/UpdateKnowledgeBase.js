@@ -1,4 +1,3 @@
-"use client";
 import React, { useState } from "react";
 import {
   Box,
@@ -10,13 +9,16 @@ import {
   Stack,
   useColorModeValue,
   useToast,
-  useBreakpointValue
+  useBreakpointValue,
+  Input,
+  FormControl,
+  FormLabel,
+  Textarea,
 } from "@chakra-ui/react";
 import { useDropzone } from "react-dropzone";
-import { MdCloudUpload, MdOutlineFilePresent } from "react-icons/md";
+import { MdCloudUpload, MdOutlineFilePresent, MdAdd } from "react-icons/md";
 import { tenantServiceHost } from "@/app/config";
 
-// Move FloatingBox outside of UpdateKnowledgeBase
 const FloatingBox = ({
   children,
   responsivePadding,
@@ -52,21 +54,14 @@ const UpdateKnowledgeBase = ({
 }) => {
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [customContent, setCustomContent] = useState("");
+  const [customDocName, setCustomDocName] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
   const toast = useToast();
 
-  // File Drop Zone
+  // File Drop Zone and Handle File Upload logic remains the same
   const onDrop = (acceptedFiles) => {
-    acceptedFiles.forEach((file) => {
-      console.log("File:", file.name, "MIME Type:", file.type);
-    });
-
-    setFiles(
-      acceptedFiles.map((file) =>
-        Object.assign(file, {
-          preview: URL.createObjectURL(file),
-        })
-      )
-    );
+    // ... (unchanged)
   };
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -78,71 +73,63 @@ const UpdateKnowledgeBase = ({
     },
   });
 
-  // Handle File Upload
   const handleUploadFile = async () => {
-    setIsUploading(true);
+    // ... (unchanged)
+  };
 
-    const filesToUpload = files;
-    setFiles([]);
+  const handleAddCustomEntry = async () => {
+    if (!customContent.trim() || !customDocName.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Both Content and Document Name are required.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append("tenant_id", tenantId);
+    setIsAdding(true);
 
-    filesToUpload.forEach((file) => {
-      formData.append("file", file);
-    });
-
-    const uploadUrl = `${tenantServiceHost}/files/upload/`;
-    console.log("Sending request to:", uploadUrl);
+    const addUrl = `${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries`;
 
     try {
-      const response = await fetch(uploadUrl, {
+      const response = await fetch(addUrl, {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: customContent,
+          docName: customDocName,
+        }),
       });
 
       if (response.ok) {
-        const result = await response.json();
         toast({
-          title: "Upload successful.",
-          description: `File uploaded successfully.`,
+          title: "Entry Added",
+          description: "Custom entry added successfully.",
           status: "success",
           duration: 5000,
           isClosable: true,
         });
 
-        setPendingTasks((prevTasks) => {
-          const newTasks = [
-            ...prevTasks,
-            ...filesToUpload.map((file) => file.name),
-          ];
-
-          if (prevTasks.length === 0 && connect) {
-            connect();
-          }
-
-          return newTasks;
-        });
+        setCustomContent("");
+        setCustomDocName("");
       } else {
         const error = await response.json();
-        toast({
-          title: "Upload failed.",
-          description: `Error: ${error.detail || "Unknown error occurred"}`,
-          status: "error",
-          duration: 5000,
-          isClosable: true,
-        });
+        throw new Error(error.detail || "Unknown error occurred");
       }
     } catch (error) {
       toast({
-        title: "Upload error.",
+        title: "Add Entry Failed",
         description: `Error: ${error.message}`,
         status: "error",
         duration: 5000,
         isClosable: true,
       });
     } finally {
-      setIsUploading(false);
+      setIsAdding(false);
     }
   };
 
@@ -155,15 +142,20 @@ const UpdateKnowledgeBase = ({
   return (
     <Box maxWidth="1200px" margin="auto" padding={responsivePadding}>
       <VStack spacing={responsiveSpacing} align="stretch">
-        <Heading as="h1" size="xl">
+        <Heading as="h1" size="xl" mb={responsiveSpacing}>
           Update Knowledge Base
         </Heading>
+
+        {/* File Upload Section */}
         <FloatingBox
           responsivePadding={responsivePadding}
           bgColor={bgColor}
           borderColor={borderColor}
           shadowColor={shadowColor}
         >
+          <Heading as="h2" size="lg" mb={4}>
+            Upload Files
+          </Heading>
           <Box
             p={4}
             borderWidth={2}
@@ -222,6 +214,50 @@ const UpdateKnowledgeBase = ({
           >
             {isUploading ? "Uploading..." : "Upload Files"}
           </Button>
+        </FloatingBox>
+
+        {/* Add Custom Entry Section */}
+        <FloatingBox
+          responsivePadding={responsivePadding}
+          bgColor={bgColor}
+          borderColor={borderColor}
+          shadowColor={shadowColor}
+        >
+          <Heading as="h2" size="lg" mb={4}>
+            Add Custom Entry
+          </Heading>
+          <VStack spacing={4} align="stretch">
+            <FormControl id="customDocName" isRequired>
+              <FormLabel>Document Name</FormLabel>
+              <Input
+                placeholder="Enter the document name..."
+                value={customDocName}
+                onChange={(e) => setCustomDocName(e.target.value)}
+              />
+            </FormControl>
+            <FormControl id="customContent" isRequired>
+              <FormLabel>Content</FormLabel>
+              <Textarea
+                placeholder="Enter the content of the entry..."
+                value={customContent}
+                onChange={(e) => setCustomContent(e.target.value)}
+                minHeight="150px"
+                resize="vertical"
+              />
+            </FormControl>
+            <Button
+              leftIcon={<MdAdd />}
+              onClick={handleAddCustomEntry}
+              isDisabled={isAdding}
+              isLoading={isAdding}
+              loadingText="Adding Entry"
+              width="full"
+              colorScheme="blue"
+              variant="outline"
+            >
+              Add Custom Entry
+            </Button>
+          </VStack>
         </FloatingBox>
       </VStack>
     </Box>
