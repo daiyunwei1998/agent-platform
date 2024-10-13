@@ -28,8 +28,10 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
-  Input,
   useBreakpointValue,
+  useToast,
+  NumberInput,
+  NumberInputField,
 } from '@chakra-ui/react';
 import {
   LineChart,
@@ -54,6 +56,11 @@ const BillingPage = ({ tenantId }) => {
   const [showUsageDetails, setShowUsageDetails] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [alertThreshold, setAlertThreshold] = useState('');
+  const [currentUsageAlert, setCurrentUsageAlert] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUsageAlertLoading, setIsUsageAlertLoading] = useState(true);
+
+  const toast = useToast();
 
   const bgColor = useColorModeValue('white', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -62,6 +69,30 @@ const BillingPage = ({ tenantId }) => {
   const responsiveSpacing = useBreakpointValue({ base: 4, md: 6, lg: 8 });
   const responsivePadding = useBreakpointValue({ base: 4, md: 6, lg: 8 });
   const responsiveDirection = useBreakpointValue({ base: 'column', md: 'row' });
+
+  // Function to fetch current usage alert
+  const fetchUsageAlert = async () => {
+    setIsUsageAlertLoading(true);
+    try {
+      const response = await axios.get(
+        `${tenantServiceHost}/api/v1/tenants/${tenantId}/usage-alert`
+      );
+      // Ensure the usage_alert is a number
+      const usageAlertValue =
+        response.data.usage_alert != null ? Number(response.data.usage_alert) : null;
+      setCurrentUsageAlert(usageAlertValue);
+      console.log("Usage alert fetched:", usageAlertValue);
+    } catch (error) {
+      console.error('Error fetching usage alert:', error);
+      setError('Failed to fetch usage alert.');
+    } finally {
+      setIsUsageAlertLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsageAlert();
+  }, [tenantId]);
 
   useEffect(() => {
     const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
@@ -128,10 +159,63 @@ const BillingPage = ({ tenantId }) => {
     fetchData();
   }, [tenantId]);
 
-  const handleSaveAlertThreshold = () => {
-    // Implement saving logic here
-    console.log('Alert threshold set to:', alertThreshold);
-    setIsAlertModalOpen(false);
+  const handleSaveAlertThreshold = async () => {
+    const parsedThreshold = parseInt(alertThreshold, 10);
+
+    // Input validation
+    if (isNaN(parsedThreshold) || parsedThreshold < 0) {
+      toast({
+        title: 'Invalid Input',
+        description: 'Please enter a valid non-negative number for the threshold.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const response = await axios.patch(
+        `${tenantServiceHost}/api/v1/tenants/${tenantId}/usage-alert`,
+        { usage_alert: parsedThreshold },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      // Option 1: Directly set currentUsageAlert using parsedThreshold
+      setCurrentUsageAlert(parsedThreshold);
+      console.log("Usage alert updated to:", parsedThreshold);
+
+      // Option 2: If API returns the updated usage_alert, uncomment the following lines:
+      // const updatedUsageAlert =
+      //   response.data.usage_alert != null ? Number(response.data.usage_alert) : null;
+      // setCurrentUsageAlert(updatedUsageAlert);
+      // console.log("Usage alert updated from API response:", updatedUsageAlert);
+
+      toast({
+        title: 'Success',
+        description: 'Usage alert threshold updated successfully.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      setIsAlertModalOpen(false);
+    } catch (error) {
+      console.error('Error updating usage alert:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update usage alert threshold.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const FloatingBox = ({ children, ...props }) => (
@@ -153,7 +237,7 @@ const BillingPage = ({ tenantId }) => {
     </Box>
   );
 
-  if (isLoading) {
+  if (isLoading || isUsageAlertLoading) {
     return (
       <Box
         display="flex"
@@ -199,6 +283,17 @@ const BillingPage = ({ tenantId }) => {
               <StatHelpText>Based on current usage</StatHelpText>
             </Stat>
           </FloatingBox>
+          <FloatingBox flex={1}>
+            <Stat>
+              <StatLabel>Usage Alert Threshold</StatLabel>
+              <StatNumber>
+                {currentUsageAlert != null ? `${currentUsageAlert.toLocaleString()} tokens` : 'Not Set'}
+              </StatNumber>
+              <StatHelpText>
+                {currentUsageAlert != null ? 'Current threshold' : 'No threshold set'}
+              </StatHelpText>
+            </Stat>
+          </FloatingBox>
         </HStack>
 
         {usageData.length > 0 ? (
@@ -226,6 +321,12 @@ const BillingPage = ({ tenantId }) => {
                   dataKey="tokens"
                   stroke="#3182CE"
                   name="Tokens"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#38A169"
+                  name="Price"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -307,8 +408,15 @@ const BillingPage = ({ tenantId }) => {
         </FloatingBox>
 
         <HStack justify="space-between" flexDirection={responsiveDirection}>
-          <Button colorScheme="blue" mb={{ base: 2, md: 0 }}>Update Payment Method</Button>
-          <Button onClick={() => setIsAlertModalOpen(true)}>Set Usage Alert</Button>
+          <Button colorScheme="blue" mb={{ base: 2, md: 0 }}>
+            Update Payment Method
+          </Button>
+          <Button onClick={() => {
+            setAlertThreshold(currentUsageAlert != null ? currentUsageAlert.toString() : '');
+            setIsAlertModalOpen(true);
+          }}>
+            Set Usage Alert
+          </Button>
         </HStack>
       </VStack>
 
@@ -326,14 +434,22 @@ const BillingPage = ({ tenantId }) => {
               Enter the token usage threshold at which you would like to receive
               an alert:
             </Text>
-            <Input
+            <NumberInput
               placeholder="Enter token threshold"
               value={alertThreshold}
-              onChange={(e) => setAlertThreshold(e.target.value)}
-            />
+              onChange={(valueString) => setAlertThreshold(valueString)}
+              min={0}
+            >
+              <NumberInputField />
+            </NumberInput>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSaveAlertThreshold}>
+            <Button
+              colorScheme="blue"
+              mr={3}
+              onClick={handleSaveAlertThreshold}
+              isLoading={isUpdating}
+            >
               Save
             </Button>
             <Button variant="ghost" onClick={() => setIsAlertModalOpen(false)}>
