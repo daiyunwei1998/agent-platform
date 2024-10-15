@@ -26,6 +26,7 @@ import {
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost } from "@/app/config";
 import { CloseIcon, ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons"; // Icons for dropdown
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 
 const AgentChat = ({ tenantId, userId, userName }) => {
   // State Variables
@@ -457,9 +458,26 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     ul: ({ node, ...props }) => (
       <UnorderedList pl={4} styleType="disc" {...props} />
     ),
-    li: ({ node, ...props }) => (
-      <ListItem pl={2} {...props} />
-    ),
+    li: ({ node, ...props }) => <ListItem pl={2} {...props} />,
+    code({ node, inline, className, children, ...props }) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <Box overflowX="auto" borderRadius="md" my={2}>
+          <SyntaxHighlighter
+            style={solarizedlight}
+            language={match[1]}
+            PreTag="div"
+            {...props}
+          >
+            {String(children).replace(/\n$/, '')}
+          </SyntaxHighlighter>
+        </Box>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
   };
 
   console.log(messages);
