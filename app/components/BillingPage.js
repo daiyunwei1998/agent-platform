@@ -61,6 +61,7 @@ const BillingPage = ({ tenantId }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [isUsageAlertLoading, setIsUsageAlertLoading] = useState(true);
   const [downloadingInvoices, setDownloadingInvoices] = useState([]); // Added state
+  const [showAllUsageData, setShowAllUsageData] = useState(false); // For viewing all days
 
   const toast = useToast();
 
@@ -197,15 +198,8 @@ const BillingPage = ({ tenantId }) => {
         }
       );
 
-      // Option 1: Directly set currentUsageAlert using parsedThreshold
       setCurrentUsageAlert(parsedThreshold);
       console.log("Usage alert updated to:", parsedThreshold);
-
-      // Option 2: If API returns the updated usage_alert, uncomment the following lines:
-      // const updatedUsageAlert =
-      //   response.data.usage_alert != null ? Number(response.data.usage_alert) : null;
-      // setCurrentUsageAlert(updatedUsageAlert);
-      // console.log("Usage alert updated from API response:", updatedUsageAlert);
 
       toast({
         title: 'Success',
@@ -365,7 +359,7 @@ const BillingPage = ({ tenantId }) => {
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {usageData.slice(0, 5).map((item, index) => (
+                  {usageData.slice(0, showAllUsageData ? usageData.length : 5).map((item, index) => (
                     <Tr key={index}>
                       <Td>{item.date}</Td>
                       <Td>{item.tokens.toLocaleString()}</Td>
@@ -375,8 +369,13 @@ const BillingPage = ({ tenantId }) => {
                 </Tbody>
               </Table>
               {usageData.length > 5 && (
-                <Text mt={2} color="blue.500" cursor="pointer">
-                  View all {usageData.length} days
+                <Text
+                  mt={2}
+                  color="blue.500"
+                  cursor="pointer"
+                  onClick={() => setShowAllUsageData(!showAllUsageData)}
+                >
+                  {showAllUsageData ? 'View less' : `View all ${usageData.length} days`}
                 </Text>
               )}
             </Collapse>
@@ -423,10 +422,7 @@ const BillingPage = ({ tenantId }) => {
           )}
         </FloatingBox>
 
-       {/*} <HStack justify="space-between" flexDirection={responsiveDirection}>
-          <Button colorScheme="blue" mb={{ base: 2, md: 0 }}>
-            Update Payment Method
-          </Button>
+        <HStack justify="flex-end" flexDirection={responsiveDirection}>
           <Button onClick={() => {
             setAlertThreshold(currentUsageAlert != null ? currentUsageAlert.toString() : '');
             setIsAlertModalOpen(true);
@@ -434,7 +430,7 @@ const BillingPage = ({ tenantId }) => {
             Set Usage Alert
           </Button>
         </HStack>
-      </VStack> */}
+      </VStack> 
 
       {/* Usage Alert Modal */}
       <Modal
