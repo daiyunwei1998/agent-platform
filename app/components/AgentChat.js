@@ -27,6 +27,8 @@ import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost } from "@/app/config";
 import { CloseIcon, ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons"; // Icons for dropdown
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { solarizedlight } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+
 
 const AgentChat = ({ tenantId, userId, userName }) => {
   // State Variables
