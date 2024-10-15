@@ -423,7 +423,7 @@ const BillingPage = ({ tenantId }) => {
           )}
         </FloatingBox>
 
-        <HStack justify="space-between" flexDirection={responsiveDirection}>
+       {/*} <HStack justify="space-between" flexDirection={responsiveDirection}>
           <Button colorScheme="blue" mb={{ base: 2, md: 0 }}>
             Update Payment Method
           </Button>
@@ -434,7 +434,7 @@ const BillingPage = ({ tenantId }) => {
             Set Usage Alert
           </Button>
         </HStack>
-      </VStack>
+      </VStack> */}
 
       {/* Usage Alert Modal */}
       <Modal
