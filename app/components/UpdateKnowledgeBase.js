@@ -266,7 +266,7 @@ const UpdateKnowledgeBase = ({
               {isDragActive ? "Drop files here" : "Drag & drop files or click"}
             </Text>
             <Text fontSize="sm" color="gray.500">
-              (PDF, TXT, JSON)
+              (PDF)
             </Text>
 
             {files.length > 0 && (
