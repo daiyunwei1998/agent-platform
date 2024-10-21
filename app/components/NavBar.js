@@ -109,7 +109,7 @@ const Navbar = ({ name, logo, initialLoggedIn}) => {
               <Image src={`${imageHost}/tenant_logos/user.png`} alt="User" boxSize="40px" borderRadius="full" />
             </MenuButton>
             <MenuList zIndex={10}>
-              <MenuItem onClick={() => router.push('/account-settings')}>Account Settings</MenuItem>
+              <MenuItem onClick={() => router.push('/admin/bot-management')}>Admin</MenuItem>
               <MenuItem onClick={handleLogout}>Log Out</MenuItem>
             </MenuList>
           </Menu>

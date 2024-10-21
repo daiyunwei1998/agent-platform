@@ -26,6 +26,9 @@ import {
 import ReactMarkdown from "react-markdown"; // Import ReactMarkdown
 import { chatServiceHost, tenantServiceHost, imageHost, aiServiceHost } from "@/app/config";
 import { CloseIcon, ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons"; // Icons for dropdown
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { solarizedlight } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+
 
 const AgentChat = ({ tenantId, userId, userName }) => {
   // State Variables
@@ -76,6 +79,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
       if (clientRef.current) {
         clientRef.current.deactivate();
+        clientRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,6 +203,7 @@ const AgentChat = ({ tenantId, userId, userName }) => {
           duration: 5000,
           isClosable: true,
         });
+        clientRef.current = null; 
       },
       debug: (str) => {
         console.log(str);
@@ -315,16 +320,17 @@ const AgentChat = ({ tenantId, userId, userName }) => {
 
       const summaryText = response.data.summary;
       setSummary(summaryText);
+     
     } catch (error) {
       console.error("Error fetching summary:", error);
       setSummaryError("Failed to load summary.");
-      toast({
-        title: "Error",
-        description: "Failed to fetch customer summary.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+        toast({
+          title: "Error",
+          description: "Failed to fetch customer summary.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
     } finally {
       setIsLoadingSummary(false);
     }
@@ -405,14 +411,18 @@ const AgentChat = ({ tenantId, userId, userName }) => {
         console.error("Invalid history response format:", response);
       }
     } catch (error) {
-      console.error("Error fetching chat history:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch chat history.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      if (error.response && error.response.status === 404) {
+        console.warn("No chat history found for this customer.");
+      } else {
+        console.error("Error fetching chat history:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch chat history.",
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
     }
   };
 
@@ -450,9 +460,26 @@ const AgentChat = ({ tenantId, userId, userName }) => {
     ul: ({ node, ...props }) => (
       <UnorderedList pl={4} styleType="disc" {...props} />
     ),
-    li: ({ node, ...props }) => (
-      <ListItem pl={2} {...props} />
-    ),
+    li: ({ node, ...props }) => <ListItem pl={2} {...props} />,
+    code({ node, inline, className, children, ...props }) {
+      const match = /language-(\w+)/.exec(className || '');
+      return !inline && match ? (
+        <Box overflowX="auto" borderRadius="md" my={2}>
+          <SyntaxHighlighter
+            style={solarizedlight}
+            language={match[1]}
+            PreTag="div"
+            {...props}
+          >
+            {String(children).replace(/\n$/, '')}
+          </SyntaxHighlighter>
+        </Box>
+      ) : (
+        <code className={className} {...props}>
+          {children}
+        </code>
+      );
+    },
   };
 
   console.log(messages);

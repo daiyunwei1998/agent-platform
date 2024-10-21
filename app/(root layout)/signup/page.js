@@ -19,13 +19,12 @@ import {
   InputGroup,
   InputRightElement,
 } from '@chakra-ui/react';
-import { FcGoogle } from 'react-icons/fc';
 import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
 import { Providers } from '@/app/components/providers';
 import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config';
 import { useRouter } from 'next/navigation';
 
-const Signin = () => {
+const SignUp = () => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
@@ -305,15 +304,6 @@ const Signin = () => {
             <>
               <Divider />
 
-              <Button
-                leftIcon={<FcGoogle />}
-                variant="outline"
-                w="full"
-                size="lg"
-              >
-                使用 Google 登入
-              </Button>
-
               <Text textAlign="center">
                 已經有帳戶了?{' '}
                 <Button variant="link" colorScheme="blue">
@@ -322,14 +312,11 @@ const Signin = () => {
               </Text>
             </>
           )}
-          
-          <Text fontSize="sm" color="gray.500" textAlign="center" mt={4}>
-            © 2024 閃應 All rights reserved.
-          </Text>
+        
         </VStack>
       </Container>
     </Providers>
   );
 };
 
-export default Signin;
+export default SignUp;

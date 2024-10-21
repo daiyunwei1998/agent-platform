@@ -191,6 +191,7 @@ const BotManagement = ({ tenantId }) => {
                     setPendingTasks={setPendingTasks}
                     connect={connect}
                     clientRef={clientRef}
+                    setRefreshKnowledgeBase={setRefreshKnowledgeBase}
                   />
                   <ViewKnowledgeBase tenantId={tenantId} refreshTrigger={refreshKnowledgeBase}  />
                 </>

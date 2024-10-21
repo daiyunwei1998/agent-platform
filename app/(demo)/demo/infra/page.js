@@ -18,7 +18,6 @@ import {
 } from '@chakra-ui/react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { FcGoogle } from 'react-icons/fc'
 import { Providers } from '@/app/components/providers'
 import { chatServiceHost, tenantServiceHost, imageHost } from '@/app/config'
 

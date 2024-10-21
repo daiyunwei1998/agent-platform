@@ -91,7 +91,7 @@ const ViewKnowledgeBase = ({ tenantId, refreshTrigger }) => {
     setIsLoadingDocNames(true);
     try {
       const response = await fetch(
-        `${tenantServiceHost}/api/v1/tenant_docs/${tenantId}/`
+        `${tenantServiceHost}/api/v1/tenant_docs/${tenantId}`
       );
 
       if (response.status === 404) {

@@ -10,7 +10,11 @@ import {
   Stack,
   useColorModeValue,
   useToast,
-  useBreakpointValue
+  useBreakpointValue,
+  FormControl,
+  FormLabel,
+  Input,
+  Textarea,
 } from "@chakra-ui/react";
 import { useDropzone } from "react-dropzone";
 import { MdCloudUpload, MdOutlineFilePresent } from "react-icons/md";
@@ -49,9 +53,17 @@ const UpdateKnowledgeBase = ({
   setPendingTasks,
   connect,
   clientRef,
+  setRefreshKnowledgeBase, 
 }) => {
+  // States for File Upload
   const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // States for Add Entry
+  const [entryContent, setEntryContent] = useState("");
+  const [entryDocName, setEntryDocName] = useState("");
+  const [isAddingEntry, setIsAddingEntry] = useState(false);
+
   const toast = useToast();
 
   // File Drop Zone
@@ -146,6 +158,75 @@ const UpdateKnowledgeBase = ({
     }
   };
 
+  // Handle Add Entry
+  const handleAddEntry = async () => {
+    if (!entryContent.trim() || !entryDocName.trim()) {
+      toast({
+        title: "Invalid input.",
+        description: "Both Content and Document Name are required.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsAddingEntry(true);
+
+    const addEntryUrl = `${tenantServiceHost}/api/v1/knowledge_base/${tenantId}/entries`;
+
+    try {
+      const response = await fetch(addEntryUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          content: entryContent,
+          docName: entryDocName,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast({
+          title: "Entry added.",
+          description: result.message,
+          status: "success",
+          duration: 5000,
+          isClosable: true,
+        });
+
+        // Reset form fields
+        setEntryContent("");
+        setEntryDocName("");
+
+        setRefreshKnowledgeBase((prev) => prev + 1);
+        // Optionally, update pendingTasks or other state
+        // setPendingTasks([...pendingTasks, `Added entry to ${entryDocName}`]);
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Add Entry failed.",
+          description: `Error: ${error.detail || "Unknown error occurred"}`,
+          status: "error",
+          duration: 5000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Add Entry error.",
+        description: `Error: ${error.message}`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsAddingEntry(false);
+    }
+  };
+
   const responsiveSpacing = useBreakpointValue({ base: 4, md: 6, lg: 8 });
   const responsivePadding = useBreakpointValue({ base: 4, md: 6, lg: 8 });
   const bgColor = useColorModeValue('white', 'gray.700');
@@ -158,6 +239,8 @@ const UpdateKnowledgeBase = ({
         <Heading as="h1" size="xl">
           Update Knowledge Base
         </Heading>
+
+        {/* File Upload Section */}
         <FloatingBox
           responsivePadding={responsivePadding}
           bgColor={bgColor}
@@ -183,7 +266,7 @@ const UpdateKnowledgeBase = ({
               {isDragActive ? "Drop files here" : "Drag & drop files or click"}
             </Text>
             <Text fontSize="sm" color="gray.500">
-              (PDF, TXT, JSON)
+              (PDF)
             </Text>
 
             {files.length > 0 && (
@@ -222,6 +305,45 @@ const UpdateKnowledgeBase = ({
           >
             {isUploading ? "Uploading..." : "Upload Files"}
           </Button>
+        </FloatingBox>
+
+        {/* Add Entry Section */}
+        <FloatingBox
+          responsivePadding={responsivePadding}
+          bgColor={bgColor}
+          borderColor={borderColor}
+          shadowColor={shadowColor}
+        >
+          <Heading as="h2" size="md" mb={4}>
+            Add New Entry
+          </Heading>
+          <VStack spacing={4} align="stretch">
+            <FormControl id="docName" isRequired>
+              <FormLabel>Document Name</FormLabel>
+              <Input
+                placeholder="Enter document name"
+                value={entryDocName}
+                onChange={(e) => setEntryDocName(e.target.value)}
+              />
+            </FormControl>
+            <FormControl id="content" isRequired>
+              <FormLabel>Content</FormLabel>
+              <Textarea
+                placeholder="Enter entry content"
+                value={entryContent}
+                onChange={(e) => setEntryContent(e.target.value)}
+              />
+            </FormControl>
+            <Button
+              colorScheme="blue"
+              onClick={handleAddEntry}
+              isDisabled={!entryContent.trim() || !entryDocName.trim()}
+              isLoading={isAddingEntry}
+              width="full"
+            >
+              {isAddingEntry ? "Adding..." : "Add Entry"}
+            </Button>
+          </VStack>
         </FloatingBox>
       </VStack>
     </Box>

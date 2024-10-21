@@ -28,8 +28,10 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
-  Input,
   useBreakpointValue,
+  useToast,
+  NumberInput,
+  NumberInputField,
 } from '@chakra-ui/react';
 import {
   LineChart,
@@ -49,11 +51,19 @@ const BillingPage = ({ tenantId }) => {
   const [totalUsage, setTotalUsage] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
   const [billingHistory, setBillingHistory] = useState([]);
+  const [hasBillingHistory, setHasBillingHistory] = useState(true); // Added state
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showUsageDetails, setShowUsageDetails] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [alertThreshold, setAlertThreshold] = useState('');
+  const [currentUsageAlert, setCurrentUsageAlert] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUsageAlertLoading, setIsUsageAlertLoading] = useState(true);
+  const [downloadingInvoices, setDownloadingInvoices] = useState([]); // Added state
+  const [showAllUsageData, setShowAllUsageData] = useState(false); // For viewing all days
+
+  const toast = useToast();
 
   const bgColor = useColorModeValue('white', 'gray.700');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
@@ -62,6 +72,30 @@ const BillingPage = ({ tenantId }) => {
   const responsiveSpacing = useBreakpointValue({ base: 4, md: 6, lg: 8 });
   const responsivePadding = useBreakpointValue({ base: 4, md: 6, lg: 8 });
   const responsiveDirection = useBreakpointValue({ base: 'column', md: 'row' });
+
+  // Function to fetch current usage alert
+  const fetchUsageAlert = async () => {
+    setIsUsageAlertLoading(true);
+    try {
+      const response = await axios.get(
+        `${tenantServiceHost}/api/v1/tenants/${tenantId}/usage-alert`
+      );
+      // Ensure the usage_alert is a number
+      const usageAlertValue =
+        response.data.usage_alert != null ? Number(response.data.usage_alert) : null;
+      setCurrentUsageAlert(usageAlertValue);
+      console.log("Usage alert fetched:", usageAlertValue);
+    } catch (error) {
+      console.error('Error fetching usage alert:', error);
+      setError('Failed to fetch usage alert.');
+    } finally {
+      setIsUsageAlertLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsageAlert();
+  }, [tenantId]);
 
   useEffect(() => {
     const timezoneOffsetMinutes = -new Date().getTimezoneOffset();
@@ -82,7 +116,7 @@ const BillingPage = ({ tenantId }) => {
           }
         );
 
-        if (!Array.isArray(response.data) || response.data.length === 0) {
+        if (!Array.isArray(response.data)) {
           throw new Error('Invalid data received from API');
         }
 
@@ -104,22 +138,31 @@ const BillingPage = ({ tenantId }) => {
         setTotalUsage(totalTokens);
         setTotalPrice(totalCost);
 
-        // Set fake billing history data
-        setBillingHistory([
-          { period: 'Aug 2024', tokensUsed: 500000, totalPrice: 50.0 },
-          { period: 'Jul 2024', tokensUsed: 450000, totalPrice: 45.0 },
-          { period: 'Jun 2024', tokensUsed: 480000, totalPrice: 48.0 },
-        ]);
-      } catch (error) {
-        if (error.response && error.response.status === 404) {
-          setUsageData([]);
-          setTotalUsage(0);
-          setTotalPrice(0);
-          console.log('No usage data found for the selected period.');
-        } else {
-          console.error('Error fetching usage data:', error);
-          setError(error.message);
+        // Fetch real billing history data
+        try {
+          const billingResponse = await axios.get(
+            `${tenantServiceHost}/api/v1/tenants/${tenantId}/billing-history`
+          );
+          if (Array.isArray(billingResponse.data) && billingResponse.data.length > 0) {
+            setBillingHistory(billingResponse.data);
+            setHasBillingHistory(true);
+          } else {
+            setBillingHistory([]);
+            setHasBillingHistory(false);
+          }
+        } catch (billingError) {
+          if (billingError.response && billingError.response.status === 404) {
+            // No billing history found
+            setBillingHistory([]);
+            setHasBillingHistory(false);
+          } else {
+            // Other errors
+            throw billingError;
+          }
         }
+      } catch (error) {
+        console.error('Error fetching usage data:', error);
+        setError(error.message || 'An error occurred while fetching data.');
       } finally {
         setIsLoading(false);
       }
@@ -128,10 +171,56 @@ const BillingPage = ({ tenantId }) => {
     fetchData();
   }, [tenantId]);
 
-  const handleSaveAlertThreshold = () => {
-    // Implement saving logic here
-    console.log('Alert threshold set to:', alertThreshold);
-    setIsAlertModalOpen(false);
+  const handleSaveAlertThreshold = async () => {
+    const parsedThreshold = parseInt(alertThreshold, 10);
+
+    // Input validation
+    if (isNaN(parsedThreshold) || parsedThreshold < 0) {
+      toast({
+        title: 'Invalid Input',
+        description: 'Please enter a valid non-negative number for the threshold.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      const response = await axios.patch(
+        `${tenantServiceHost}/api/v1/tenants/${tenantId}/usage-alert`,
+        { usage_alert: parsedThreshold },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      setCurrentUsageAlert(parsedThreshold);
+      console.log("Usage alert updated to:", parsedThreshold);
+
+      toast({
+        title: 'Success',
+        description: 'Usage alert threshold updated successfully.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      setIsAlertModalOpen(false);
+    } catch (error) {
+      console.error('Error updating usage alert:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update usage alert threshold.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const FloatingBox = ({ children, ...props }) => (
@@ -153,7 +242,7 @@ const BillingPage = ({ tenantId }) => {
     </Box>
   );
 
-  if (isLoading) {
+  if (isLoading || isUsageAlertLoading) {
     return (
       <Box
         display="flex"
@@ -166,20 +255,15 @@ const BillingPage = ({ tenantId }) => {
     );
   }
 
-  if (error) {
-    return (
-      <Alert status="error">
-        <AlertIcon />
-        Error loading data: {error}
-      </Alert>
-    );
-  }
-
-  const periodString = getCurrentMonthRange();
-
   return (
     <Box maxWidth="1200px" margin="auto" padding={responsivePadding}>
       <VStack spacing={responsiveSpacing} align="stretch">
+        {error && (
+          <Alert status="error">
+            <AlertIcon />
+            Error loading data: {error}
+          </Alert>
+        )}
         <Heading as="h1" size="xl">
           Billing Dashboard
         </Heading>
@@ -189,7 +273,7 @@ const BillingPage = ({ tenantId }) => {
             <Stat>
               <StatLabel>Current Usage</StatLabel>
               <StatNumber>{totalUsage.toLocaleString()} tokens</StatNumber>
-              <StatHelpText>{periodString}</StatHelpText>
+              <StatHelpText>{getCurrentMonthRange()}</StatHelpText>
             </Stat>
           </FloatingBox>
           <FloatingBox flex={1}>
@@ -197,6 +281,17 @@ const BillingPage = ({ tenantId }) => {
               <StatLabel>Estimated Bill</StatLabel>
               <StatNumber>${totalPrice.toFixed(2)}</StatNumber>
               <StatHelpText>Based on current usage</StatHelpText>
+            </Stat>
+          </FloatingBox>
+          <FloatingBox flex={1}>
+            <Stat>
+              <StatLabel>Usage Alert Threshold</StatLabel>
+              <StatNumber>
+                {currentUsageAlert != null ? `${currentUsageAlert.toLocaleString()} tokens` : 'Not Set'}
+              </StatNumber>
+              <StatHelpText>
+                {currentUsageAlert != null ? 'Current threshold' : 'No threshold set'}
+              </StatHelpText>
             </Stat>
           </FloatingBox>
         </HStack>
@@ -226,6 +321,12 @@ const BillingPage = ({ tenantId }) => {
                   dataKey="tokens"
                   stroke="#3182CE"
                   name="Tokens"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="price"
+                  stroke="#38A169"
+                  name="Price"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -258,7 +359,7 @@ const BillingPage = ({ tenantId }) => {
                   </Tr>
                 </Thead>
                 <Tbody>
-                  {usageData.slice(0, 5).map((item, index) => (
+                  {usageData.slice(0, showAllUsageData ? usageData.length : 5).map((item, index) => (
                     <Tr key={index}>
                       <Td>{item.date}</Td>
                       <Td>{item.tokens.toLocaleString()}</Td>
@@ -268,8 +369,13 @@ const BillingPage = ({ tenantId }) => {
                 </Tbody>
               </Table>
               {usageData.length > 5 && (
-                <Text mt={2} color="blue.500" cursor="pointer">
-                  View all {usageData.length} days
+                <Text
+                  mt={2}
+                  color="blue.500"
+                  cursor="pointer"
+                  onClick={() => setShowAllUsageData(!showAllUsageData)}
+                >
+                  {showAllUsageData ? 'View less' : `View all ${usageData.length} days`}
                 </Text>
               )}
             </Collapse>
@@ -280,37 +386,51 @@ const BillingPage = ({ tenantId }) => {
           <Heading as="h2" size="md" mb={4}>
             Billing History
           </Heading>
-          <Table variant="simple">
-            <Thead>
-              <Tr>
-                <Th>Period</Th>
-                <Th>Tokens Used</Th>
-                <Th>Total Price</Th>
-                <Th>Invoice</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {billingHistory.map((item, index) => (
-                <Tr key={index}>
-                  <Td>{item.period}</Td>
-                  <Td>{item.tokensUsed.toLocaleString()}</Td>
-                  <Td>${item.totalPrice.toFixed(2)}</Td>
-                  <Td>
-                    <Button size="sm" colorScheme="blue">
-                      Download Invoice
-                    </Button>
-                  </Td>
+          {hasBillingHistory ? (
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Period</Th>
+                  <Th>Tokens Used</Th>
+                  <Th>Total Price</Th>
+                  <Th>Invoice</Th>
                 </Tr>
-              ))}
-            </Tbody>
-          </Table>
+              </Thead>
+              <Tbody>
+                {billingHistory.map((item, index) => (
+                  <Tr key={index}>
+                    <Td>{item.period}</Td>
+                    <Td>{item.tokens_used.toLocaleString()}</Td> {/* Updated property */}
+                    <Td>${item.total_price.toFixed(2)}</Td> {/* Updated property */}
+                    <Td>
+                      <Button
+                        size="sm"
+                        colorScheme="blue"
+                        onClick={() => handleDownloadInvoice(item.id, item.period)}
+                        isLoading={downloadingInvoices.includes(item.id)}
+                        loadingText="Downloading"
+                      >
+                        Download Invoice
+                      </Button>
+                    </Td>
+                  </Tr>
+                ))}
+              </Tbody>
+            </Table>
+          ) : (
+            <Text>No billing history available.</Text>
+          )}
         </FloatingBox>
 
-        <HStack justify="space-between" flexDirection={responsiveDirection}>
-          <Button colorScheme="blue" mb={{ base: 2, md: 0 }}>Update Payment Method</Button>
-          <Button onClick={() => setIsAlertModalOpen(true)}>Set Usage Alert</Button>
+        <HStack justify="flex-end" flexDirection={responsiveDirection}>
+          <Button onClick={() => {
+            setAlertThreshold(currentUsageAlert != null ? currentUsageAlert.toString() : '');
+            setIsAlertModalOpen(true);
+          }}>
+            Set Usage Alert
+          </Button>
         </HStack>
-      </VStack>
+      </VStack> 
 
       {/* Usage Alert Modal */}
       <Modal
@@ -326,14 +446,22 @@ const BillingPage = ({ tenantId }) => {
               Enter the token usage threshold at which you would like to receive
               an alert:
             </Text>
-            <Input
+            <NumberInput
               placeholder="Enter token threshold"
               value={alertThreshold}
-              onChange={(e) => setAlertThreshold(e.target.value)}
-            />
+              onChange={(valueString) => setAlertThreshold(valueString)}
+              min={0}
+            >
+              <NumberInputField />
+            </NumberInput>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleSaveAlertThreshold}>
+            <Button
+              colorScheme="blue"
+              mr={3}
+              onClick={handleSaveAlertThreshold}
+              isLoading={isUpdating}
+            >
               Save
             </Button>
             <Button variant="ghost" onClick={() => setIsAlertModalOpen(false)}>
@@ -344,6 +472,60 @@ const BillingPage = ({ tenantId }) => {
       </Modal>
     </Box>
   );
+
+  // Handler for downloading invoice
+  async function handleDownloadInvoice(billingId, period) {
+    setDownloadingInvoices((prev) => [...prev, billingId]);
+    try {
+      const response = await axios.get(
+        `${tenantServiceHost}/api/v1/tenants/${tenantId}/billing-history/${billingId}/invoice`,
+        {
+          responseType: 'blob', // Important for handling binary data
+        }
+      );
+
+      // Create a link to trigger the download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Extract filename from headers or set a default name
+      const contentDisposition = response.headers['content-disposition'];
+      let fileName = `Invoice_${period.replace(' ', '_')}.pdf`;
+      if (contentDisposition) {
+        const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        if (fileNameMatch && fileNameMatch.length > 1) {
+          fileName = fileNameMatch[1];
+        }
+      }
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+
+      // Clean up
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: 'Download Complete',
+        description: `Invoice for ${period} has been downloaded.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Error downloading invoice:', error);
+      toast({
+        title: 'Download Failed',
+        description: 'There was an error downloading the invoice.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setDownloadingInvoices((prev) => prev.filter((id) => id !== billingId));
+    }
+  }
 };
 
 export default BillingPage;
